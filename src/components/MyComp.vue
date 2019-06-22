@@ -21,13 +21,14 @@ export default class HelloWorld extends Vue {
   }
   private created () {
     store.Todo.$fetchList()
-    store.addModule('Todo.Test', {
+    const Test = store.addModule('Todo.Test', {
       test: 'testtest',
       updateTest (a: string) {
         this.test = a
       }
     })
-    store.Todo.Test.updateTest('newtest')
+
+    Test.updateTest('newtest')
   }
 }
 </script>

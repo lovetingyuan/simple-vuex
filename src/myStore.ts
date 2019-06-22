@@ -138,7 +138,11 @@ export function createVuexStore<M extends MyModule> (modules: M, options: Option
 export function createVueStore<M extends MyModule>(modules: M) {
   let isCommitting = false
   let isGetting = false
-  const base = {
+  interface Base {
+    addModule: <T>(path: string, _module: T) => T
+    removeModule: (path: string) => void
+  }
+  const base: Base = {
     addModule(path: string, _module: MyModule) {
       const routes = path.split('.')
       const moduleName = routes.pop() as string
@@ -146,9 +150,15 @@ export function createVueStore<M extends MyModule>(modules: M) {
       routes.forEach(r => {
         parentModule = parentModule[r]
       })
-      parentModule[moduleName] = _createStore(_module, routes.concat(moduleName))
+      Object.defineProperty(parentModule, moduleName, {
+        value: _createStore(_module, routes.concat(moduleName)),
+        enumerable: true,
+        configurable: true
+      })
+      return parentModule[moduleName]
     },
     removeModule(path: string) {
+      'use strict';
       const routes = path.split('.')
       const moduleName = routes.pop() as string
       let parentModule: any = store
@@ -226,9 +236,6 @@ export function createVueStore<M extends MyModule>(modules: M) {
     return Module as unknown as M
   }
   const store = _createStore(modules)
-  return store as (M & {
-    addModule: (path: string, _module: MyModule) => void
-    removeModule: (path: string) => void
-  })
+  return store as (M & Base)
 }
 
