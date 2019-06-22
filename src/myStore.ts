@@ -211,6 +211,9 @@ export function createVueStore<M extends MyModule>(modules: M) {
           }
         } else {
           vueOption.methods[key] = function (payload: any) {
+            if (isGetting) {
+              throw new Error(`do not call mutation ${key} in getter`)
+            }
             isCommitting = true
             Modules[key].call(state, payload)
             isCommitting = false
