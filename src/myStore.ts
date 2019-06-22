@@ -138,79 +138,97 @@ export function createVuexStore<M extends MyModule> (modules: M, options: Option
 export function createVueStore<M extends MyModule>(modules: M) {
   let isCommitting = false
   let isGetting = false
-  function _createStore<M extends MyModule>(modules: M, routes: string[] = []) {
-    const vueOption: ComponentOptions<Vue> = {}
-    const data: MyModule = vueOption.data = {}
-    const subModules: [string, MyModule][] = []
-    Object.keys(modules).forEach(key => {
-      const getter = (Object.getOwnPropertyDescriptor(modules, key) as PropertyDescriptor).get
+  const base = {
+    addModule(path: string, _module: MyModule) {
+      const routes = path.split('.')
+      const moduleName = routes.pop() as string
+      let parentModule: any = store
+      routes.forEach(r => {
+        parentModule = parentModule[r]
+      })
+      parentModule[moduleName] = _createStore(_module, routes.concat(moduleName))
+    },
+    removeModule(path: string) {
+      const routes = path.split('.')
+      const moduleName = routes.pop() as string
+      let parentModule: any = store
+      routes.forEach(r => {
+        parentModule = parentModule[r]
+      })
+      delete parentModule[moduleName]
+    }
+  }
+  function _createStore<M extends MyModule>(Modules: M, routes: string[] = []) {
+    const vueOption: ComponentOptions<Vue> = { data: {} }
+    const Module: any = routes.length ? {} : Object.create(base)
+    const state = {}
+    const stateGetters = {}
+    Object.keys(Modules).forEach(key => {
+      const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
       if (/[A-Z]/.test(key[0])) {
-        subModules.push([key, _createStore(modules[key], routes.concat(key))])
-        // subModules[key] = _createStore(modules[key], routes.concat(key))
+        Module[key] = _createStore(Modules[key], routes.concat(key))
       } else if (typeof getter === 'function') {
         vueOption.computed = vueOption.computed || {}
-        vueOption.computed[key] = ({
-          [key]() {
-            isGetting = true
-            const ret = getter.call(this)
-            isGetting = false
-            return ret
+        vueOption.computed[key] = function () {
+          if (isCommitting) {
+            throw new Error(`do not call getter ${key} in mutation`)
           }
-        })[key]
-      } else if (typeof modules[key] === 'function') {
+          isGetting = true
+          const ret = getter.call(stateGetters)
+          isGetting = false
+          return ret
+        }
+        const descriptor = {
+          get() { return vueModule[key] },
+          enumerable: true
+        }
+        Object.defineProperty(stateGetters, key, descriptor)
+        Object.defineProperty(Module, key, descriptor)
+      } else if (typeof Modules[key] === 'function') {
         vueOption.methods = vueOption.methods || {}
         if (key[0] === '$') {
-          vueOption.methods[key] = ({
-            [key](payload: any) {
-              if (isCommitting) {
-                throw new Error(`do not call action ${routes.join('.')}.${key} in mutation`)
-              }
-              if (isGetting) {
-                throw new Error(`do not call action ${routes.join('.')}.${key} in getter`)
-              }
-              return modules[key].call(this, payload)
+          vueOption.methods[key] = function (payload: any) {
+            if (isCommitting) {
+              throw new Error(`do not call action ${routes.join('.')}.${key} in mutation`)
             }
-          })[key]
+            if (isGetting) {
+              throw new Error(`do not call action ${routes.join('.')}.${key} in getter`)
+            }
+            return Modules[key].call(Module, payload)
+          }
+          Module[key] = function (payload: any) {
+            return vueModule[key](payload)
+          }
         } else {
-          vueOption.methods[key] = ({
-            [key](payload: any) {
-              isCommitting = true
-              modules[key].call(this, payload)
-              isCommitting = false
-            }
-          })[key]
+          vueOption.methods[key] = function (payload: any) {
+            isCommitting = true
+            Modules[key].call(state, payload)
+            isCommitting = false
+          }
+          Module[key] = function (payload: any) {
+            vueModule[key](payload)
+          }
         }
       } else {
-        data[key] = modules[key]
-      }
-    })
-    let vueModule: any
-    if (routes.length) {
-      vueModule = new Vue(vueOption)
-    } else {
-      class _Vue extends Vue {
-        addModule(path: string, _module: MyModule) {
-          const routes = path.split('.')
-          const moduleName = routes.pop() as string
-          let parentModule = store
-          routes.forEach(r => {
-            parentModule = parentModule[r]
-          })
-          Object.defineProperty(parentModule, moduleName, {
-            value: _createStore(_module, routes.concat(moduleName))
-          })
+        (vueOption.data as any)[key] = Modules[key]
+        const descriptor = {
+          get() { return vueModule[key] },
+          set(val: any) { vueModule[key] = val },
+          enumerable: true
         }
+        Object.defineProperty(state, key, descriptor)
+        Object.defineProperty(stateGetters, key, descriptor)
+        Object.defineProperty(Module, key, descriptor)
       }
-      vueModule = new _Vue(vueOption)
-    }
-    subModules.forEach(([name, m]) => {
-      Object.defineProperty(vueModule, name, { value: m })
     })
-    return vueModule as unknown as M
+    let vueModule: any = new Vue(vueOption)
+    Object.defineProperty(Module, '__vue__', { value: vueModule })
+    return Module as unknown as M
   }
   const store = _createStore(modules)
   return store as (M & {
     addModule: (path: string, _module: MyModule) => void
+    removeModule: (path: string) => void
   })
 }
 

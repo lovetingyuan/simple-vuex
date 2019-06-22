@@ -1,6 +1,7 @@
 <template>
   <div>
-    {{store.user.name}} {{store.Todo.count}} {{store.Todo.Test.test}}
+    {{store.user.name}} {{store.Todo.count}}
+     {{store.Todo.Test.test}}
     <ol>
       <li v-for="item in store.Todo.list" :key="item">{{item}}</li>
     </ol>
@@ -21,8 +22,12 @@ export default class HelloWorld extends Vue {
   private created () {
     store.Todo.$fetchList()
     store.addModule('Todo.Test', {
-      test: 'testtest'
+      test: 'testtest',
+      updateTest (a: string) {
+        this.test = a
+      }
     })
+    store.Todo.Test.updateTest('newtest')
   }
 }
 </script>
