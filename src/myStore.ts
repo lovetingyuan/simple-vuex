@@ -138,9 +138,18 @@ export function createVuexStore<M extends MyModule> (modules: M, options: Option
 export function createVueStore<M extends MyModule>(modules: M) {
   let isCommitting = false
   let isGetting = false
+  const eventBus = new Vue()
   interface Base {
     addModule: <T>(path: string, _module: T) => T
     removeModule: (path: string) => void
+    subscribe: (listener: (arg: SubData) => any) => () => void
+  }
+  type SubData = {
+    type: string
+    payload: any
+  } | {
+    actionType: string
+    payload: any
   }
   const base: Base = {
     addModule(path: string, _module: MyModule) {
@@ -165,7 +174,13 @@ export function createVueStore<M extends MyModule>(modules: M) {
       routes.forEach(r => {
         parentModule = parentModule[r]
       })
+      parentModule[moduleName].__vue__.$destroy()
       delete parentModule[moduleName]
+    },
+    subscribe(listener) {
+      const _listener = (data: SubData) => listener(data)
+      eventBus.$on('mutation-action', _listener)
+      return () => eventBus.$off('mutation-action', _listener)
     }
   }
   function _createStore<M extends MyModule>(Modules: M, routes: string[] = []) {
@@ -204,6 +219,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
             if (isGetting) {
               throw new Error(`do not call action ${routes.join('.')}.${key} in getter`)
             }
+            eventBus.$emit('mutation-action', { actionType: routes.join('/') + '/' + key, payload })
             return Modules[key].call(Module, payload)
           }
           Module[key] = function (payload: any) {
@@ -215,6 +231,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
               throw new Error(`do not call mutation ${key} in getter`)
             }
             isCommitting = true
+            eventBus.$emit('mutation-action', { type: routes.join('/') + '/' + key, payload })
             Modules[key].call(state, payload)
             isCommitting = false
           }
