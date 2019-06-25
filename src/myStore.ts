@@ -138,11 +138,13 @@ export function createVuexStore<M extends MyModule> (modules: M, options: Option
 export function createVueStore<M extends MyModule>(modules: M) {
   let isCommitting = false
   let isGetting = false
+  let subscribeName = ''
   const eventBus = new Vue()
   interface Base {
     addModule: <T>(path: string, _module: T) => T
     removeModule: (path: string) => void
     subscribe: (listener: (arg: SubData) => any) => () => void
+    replaceState: (state: MyModule) => void
   }
   type SubData = {
     type: string
@@ -178,9 +180,25 @@ export function createVueStore<M extends MyModule>(modules: M) {
       delete parentModule[moduleName]
     },
     subscribe(listener) {
+      subscribeName = '$$store-mutation-event'
       const _listener = (data: SubData) => listener(data)
-      eventBus.$on('mutation-action', _listener)
-      return () => eventBus.$off('mutation-action', _listener)
+      eventBus.$on(subscribeName, _listener)
+      return () => eventBus.$off(subscribeName, _listener)
+    },
+    replaceState(state, _store = store) {
+      const vueInstance: Vue = _store.__vue__
+      Object.keys(state).forEach(key => {
+        if (/[A-Z]/.test(key[0])) {
+          const replaceState: any = base.replaceState
+          if (_store[key]) {
+            replaceState(state[key], _store[key])
+          } else {
+            throw new Error(`sub module ${key} not exist`)
+          }
+        } else {
+          vueInstance.$set(vueInstance, key, state[key])
+        }
+      })
     }
   }
   function _createStore<M extends MyModule>(Modules: M, routes: string[] = []) {
@@ -188,6 +206,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
     const Module: any = routes.length ? {} : Object.create(base)
     const state = {}
     const stateGetters = {}
+    const routesPath = routes.join('/')
     Object.keys(Modules).forEach(key => {
       const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
       if (/[A-Z]/.test(key[0])) {
@@ -219,7 +238,10 @@ export function createVueStore<M extends MyModule>(modules: M) {
             if (isGetting) {
               throw new Error(`do not call action ${routes.join('.')}.${key} in getter`)
             }
-            eventBus.$emit('mutation-action', { actionType: routes.join('/') + '/' + key, payload })
+            subscribeName && eventBus.$emit(subscribeName, {
+              actionType: routesPath ? `${routesPath}/${key}` : key,
+              payload
+            })
             return Modules[key].call(Module, payload)
           }
           Module[key] = function (payload: any) {
@@ -231,7 +253,10 @@ export function createVueStore<M extends MyModule>(modules: M) {
               throw new Error(`do not call mutation ${key} in getter`)
             }
             isCommitting = true
-            eventBus.$emit('mutation-action', { type: routes.join('/') + '/' + key, payload })
+            subscribeName &&  eventBus.$emit(subscribeName, {
+              type: routesPath ? `${routesPath}/${key}` : key,
+              payload
+            })
             Modules[key].call(state, payload)
             isCommitting = false
           }

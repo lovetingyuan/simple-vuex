@@ -31,6 +31,15 @@ export default class HelloWorld extends Vue {
       }
     })
     Test.updateTest('newtest')
+    store.replaceState({
+      user: {
+        name: 'newnsdfsdf',
+        age: 324
+      },
+      Todo: {
+        list: ['34fsd']
+      }
+    })
     // store.removeModule('Todo.Test')
   }
 }
