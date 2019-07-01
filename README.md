@@ -23,6 +23,9 @@ const modules = {
     get doneCount() {
       return this.list.filter(v => v.done).length
     },
+    setList(list: Item[]) {
+      this.list = list
+    },
     addItem(text: string) {
       this.list.push({
         text, done: false
@@ -30,7 +33,7 @@ const modules = {
     },
     async $fetchList() {
       const list = await request('/api/get-list')
-      this.list = list
+      this.setList(list)
     }
   }
 }
