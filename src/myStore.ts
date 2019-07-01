@@ -201,9 +201,9 @@ export function createVueStore<M extends MyModule>(modules: M) {
         }
       })
     },
-    watch(fn, cb) {
+    watch(fn, cb, option) {
       const getter = fn.bind(stateGetters)
-      return eventBus.$watch(getter as any, cb)
+      return eventBus.$watch(getter as any, cb, option)
     }
   }
   function _createStore<M extends MyModule>(Modules: M, routes: string[] = []) {

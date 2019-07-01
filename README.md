@@ -1,29 +1,52 @@
-# vuex-learn
+# simple-vuex
+*still developing...*
 
-## Project setup
-```
-yarn install
+a simpler way to use redux-like state management in vue project
+
+* simpler way to write your mutations, getters, actions, no ACTION_TYPE, commit, dispatch
+* better and natural support for typescript
+
+### example
+`store.ts`
+```typescript
+type Item = { text: string, done: boolean }
+
+const modules = {
+  user: {
+    name: 'nobody'
+  },
+  setUserName(username: string) {
+    this.user.name = username
+  },
+  Todo: {
+    list: [] as Item[],
+    get doneCount() {
+      return this.list.filter(v => v.done).length
+    },
+    addItem(item: Item) {
+      this.list.push(item)
+    },
+    async $fetchList() {
+      const list = await request('/api/get-list')
+      this.list = list
+    }
+  }
+}
+
+const store = createStore(modules)
+
+store.Todo.doneCount // equals to `store.getters['Todo/doneCount']`
+store.Todo.addItem('new item') // equals to `store.commit('Todo/addItem', 'new item')`
+store.Todo.$fetchList() // equals to `store.dispatch('Todo/$fetchList')`
+
+export default store
 ```
 
-### Compiles and hot-reloads for development
-```
-yarn run serve
-```
+### api
+* `store = createStore(modules)`
+* `store.watch(fn, cb)`
+* `store.subscribe(listener)`
+* `store.addModule(modulePath, module)`
+* `store.removeModule(modulePath)`
+* `store.replaceState(newState)`
 
-### Compiles and minifies for production
-```
-yarn run build
-```
-
-### Run your tests
-```
-yarn run test
-```
-
-### Lints and fixes files
-```
-yarn run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
