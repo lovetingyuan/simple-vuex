@@ -61,13 +61,13 @@ const modules: Modules = {
   },
 }
 
-import { createVuexStore } from './myStore'
+import createVuexStore from '../lib/createVuexStore'
 
 const store = createVuexStore(modules, {
   strict: true
 })
 
-console.log("$", store)
+console.log("vuex store: ", store)
 
 export default store
 

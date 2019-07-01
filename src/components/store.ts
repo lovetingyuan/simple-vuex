@@ -33,6 +33,8 @@ const modules = {
   }
 }
 
-import { createVueStore } from '../myStore'
+import createVueStore from '../../lib/createVueStore'
 
-export default createVueStore(modules)
+export default createVueStore(modules, {
+  strict: true
+})

@@ -15,7 +15,7 @@ import store from './store'
 store.subscribe(function () {
   console.log(arguments)
 })
-console.log('store', store)
+console.log('vue store', store)
 
 @Component
 export default class HelloWorld extends Vue {

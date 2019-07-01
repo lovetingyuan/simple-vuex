@@ -16,17 +16,7 @@ import HelloWorld from './components/HelloWorld.vue'
 })
 export default class App extends Vue {
   data () {
-    return {
-      foo: {
-        bar: {
-          baz: {
-            get () {
-              return 'sdfs'
-            }
-          }
-        }
-      }
-    }
+    return {}
   }
   created () {
     console.log('APP', this)
