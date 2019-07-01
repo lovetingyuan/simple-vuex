@@ -2,6 +2,10 @@ const modules = {
   user: {
     name: 'tingyuan'
   },
+  setName(n?: string) {
+    console.log('setName', this)
+    this.user.name = n || this.user.name.toUpperCase()
+  },
   Todo: {
     list: [] as string[],
     get count() {
@@ -24,7 +28,8 @@ const modules = {
       setTimeout(() => {
         this.setList(['111', '2222'])
       }, 2000);
-    }
+    },
+
   }
 }
 

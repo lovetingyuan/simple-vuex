@@ -6,6 +6,7 @@
       <li v-for="item in store.Todo.list" :key="item">{{item}}</li>
     </ol>
     <button @click="onAdd">add</button>
+    <button @click="changeName">name</button>
   </div>
 </template>
 <script lang="ts">
@@ -22,15 +23,31 @@ export default class HelloWorld extends Vue {
   private onAdd () {
     store.Todo.addItem(Date.now() + '')
   }
+  private changeName () {
+    store.setName('' + Date.now())
+  }
   private created () {
     store.Todo.$fetchList()
+    store.setName()
     const Test = store.addModule('Todo.Test', {
       test: 'testtest',
       updateTest (a: string) {
+        console.log('Test', this)
         this.test = a
+      },
+      get tt () {
+        console.log('tt', this)
+        return this.test
+      },
+      Bar: {
+        bb: 'bbbb',
+        get nn () {
+          return this.bb
+        }
       }
     })
     Test.updateTest('newtest')
+    console.log(Test.tt)
     store.replaceState({
       user: {
         name: 'newnsdfsdf',
@@ -39,6 +56,12 @@ export default class HelloWorld extends Vue {
       Todo: {
         list: ['34fsd']
       }
+    })
+    store.watch(function () {
+      console.log(787878)
+      return this.Todo.list[0]
+    }, function (newV, old) {
+      console.log(234234, old, newV)
     })
     // store.removeModule('Todo.Test')
   }

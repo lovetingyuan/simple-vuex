@@ -1,4 +1,4 @@
-import Vue, { ComponentOptions } from 'vue'
+import Vue, { ComponentOptions, WatchOptions } from 'vue'
 import Vuex, { Store, Module, StoreOptions } from 'vuex'
 
 interface Base<M> {
@@ -140,11 +140,12 @@ export function createVueStore<M extends MyModule>(modules: M) {
   let isGetting = false
   let subscribeName = ''
   const eventBus = new Vue()
-  interface Base {
+  interface Base<Y> {
     addModule: <T>(path: string, _module: T) => T
     removeModule: (path: string) => void
     subscribe: (listener: (arg: SubData) => any) => () => void
     replaceState: (state: MyModule) => void
+    watch<T>(fn: (this: Y) => T, cb: (value: T, oldValue: T) => void, options?: WatchOptions): () => void;
   }
   type SubData = {
     type: string
@@ -153,7 +154,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
     actionType: string
     payload: any
   }
-  const base: Base = {
+  const base: Base<M> = {
     addModule(path: string, _module: MyModule) {
       const routes = path.split('.')
       const moduleName = routes.pop() as string
@@ -162,7 +163,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
         parentModule = parentModule[r]
       })
       Object.defineProperty(parentModule, moduleName, {
-        value: _createStore(_module, routes.concat(moduleName)),
+        value: _createStore(_module, routes.concat(moduleName))[0],
         enumerable: true,
         configurable: true
       })
@@ -199,18 +200,25 @@ export function createVueStore<M extends MyModule>(modules: M) {
           vueInstance.$set(vueInstance, key, state[key])
         }
       })
+    },
+    watch(fn, cb) {
+      const getter = fn.bind(stateGetters)
+      return eventBus.$watch(getter as any, cb)
     }
   }
   function _createStore<M extends MyModule>(Modules: M, routes: string[] = []) {
     const vueOption: ComponentOptions<Vue> = { data: {} }
     const Module: any = routes.length ? {} : Object.create(base)
-    const state = {}
-    const stateGetters = {}
+    const state: MyModule = {}
+    const stateGetters: MyModule = {}
     const routesPath = routes.join('/')
     Object.keys(Modules).forEach(key => {
       const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
       if (/[A-Z]/.test(key[0])) {
-        Module[key] = _createStore(Modules[key], routes.concat(key))
+        const [_Module, _state, _stateGetters] = _createStore(Modules[key], routes.concat(key))
+        Module[key] = _Module
+        state[key] = _state
+        stateGetters[key] = _stateGetters
       } else if (typeof getter === 'function') {
         vueOption.computed = vueOption.computed || {}
         vueOption.computed[key] = function () {
@@ -253,7 +261,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
               throw new Error(`do not call mutation ${key} in getter`)
             }
             isCommitting = true
-            subscribeName &&  eventBus.$emit(subscribeName, {
+            subscribeName && eventBus.$emit(subscribeName, {
               type: routesPath ? `${routesPath}/${key}` : key,
               payload
             })
@@ -278,9 +286,8 @@ export function createVueStore<M extends MyModule>(modules: M) {
     })
     let vueModule: any = new Vue(vueOption)
     Object.defineProperty(Module, '__vue__', { value: vueModule })
-    return Module as unknown as M
+    return [Module, state, stateGetters]
   }
-  const store = _createStore(modules)
-  return store as (M & Base)
+  const [store, state, stateGetters] = _createStore(modules)
+  return store as (M & Base<M>)
 }
-
