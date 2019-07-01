@@ -47,7 +47,6 @@ export default class HelloWorld extends Vue {
       }
     })
     Test.updateTest('newtest')
-    console.log(Test.tt)
     store.replaceState({
       user: {
         name: 'newnsdfsdf',
@@ -57,12 +56,17 @@ export default class HelloWorld extends Vue {
         list: ['34fsd']
       }
     })
-    store.watch(function () {
-      console.log(787878)
-      return this.Todo.list[0]
-    }, function (newV, old) {
-      console.log(234234, old, newV)
-    })
+    // store.watch(function () {
+    //   return this
+    // }, function (newV, old) {
+    //   console.log(234234, old, newV)
+    // }, {
+    //   deep: true
+    // })
+    // store.user = {
+    //   name: 'sdfsdf'
+    // }
+    // store.user.name = 'sdfhjskfdshjkf'
     // store.removeModule('Todo.Test')
   }
 }

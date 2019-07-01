@@ -135,9 +135,10 @@ export function createVuexStore<M extends MyModule> (modules: M, options: Option
   return patchedModule as StoreType<M>
 }
 
-export function createVueStore<M extends MyModule>(modules: M) {
+export function createVueStore<M extends MyModule>(modules: M, option?: Options) {
   let isCommitting = false
   let isGetting = false
+  let isReplacing = false
   let subscribeName = ''
   const eventBus = new Vue()
   interface Base<Y> {
@@ -187,6 +188,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
       return () => eventBus.$off(subscribeName, _listener)
     },
     replaceState(state, _store = store) {
+      isReplacing = true
       const vueInstance: Vue = _store.__vue__
       Object.keys(state).forEach(key => {
         if (/[A-Z]/.test(key[0])) {
@@ -200,6 +202,7 @@ export function createVueStore<M extends MyModule>(modules: M) {
           vueInstance.$set(vueInstance, key, state[key])
         }
       })
+      isReplacing = false
     },
     watch(fn, cb, option) {
       const getter = fn.bind(stateGetters)
@@ -276,7 +279,9 @@ export function createVueStore<M extends MyModule>(modules: M) {
         (vueOption.data as any)[key] = Modules[key]
         const descriptor = {
           get() { return vueModule[key] },
-          set(val: any) { vueModule[key] = val },
+          set(val: any) {
+            vueModule[key] = val
+          },
           enumerable: true
         }
         Object.defineProperty(state, key, descriptor)
@@ -289,5 +294,12 @@ export function createVueStore<M extends MyModule>(modules: M) {
     return [Module, state, stateGetters]
   }
   const [store, state, stateGetters] = _createStore(modules)
+  if (option && option.strict) {
+    eventBus.$watch(() => state, () => {
+      if (!isCommitting && !isReplacing) {
+        throw new Error('Only mutation could change state.')
+      }
+    }, { deep: true, sync: true } as any)
+  }
   return store as (M & Base<M>)
 }
