@@ -23,8 +23,10 @@ const modules = {
     get doneCount() {
       return this.list.filter(v => v.done).length
     },
-    addItem(item: Item) {
-      this.list.push(item)
+    addItem(text: string) {
+      this.list.push({
+        text, done: false
+      })
     },
     async $fetchList() {
       const list = await request('/api/get-list')
@@ -50,3 +52,7 @@ export default store
 * `store.removeModule(modulePath)`
 * `store.replaceState(newState)`
 
+### convention
+1. name of sub-module(namespace) starts with **capital letter**
+2. name of action method(with side-effect) starts with **'$'**
+3. getter property will be taken as 'getters'
