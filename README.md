@@ -11,6 +11,25 @@ a simpler way to use redux-like state management in vue project
 ```typescript
 type Item = { text: string, done: boolean }
 
+const todoModule = {
+  list: [] as Item[],
+  get doneCount() {
+    return this.list.filter(v => v.done).length
+  },
+  setList(list: Item[]) {
+    this.list = list
+  },
+  addItem(text: string) {
+    this.list.push({
+      text, done: false
+    })
+  },
+  async $fetchList() {
+    const list = await request('/api/get-list')
+    this.setList(list)
+  }
+}
+
 const modules = {
   user: {
     name: 'nobody'
@@ -18,27 +37,24 @@ const modules = {
   setUserName(username: string) {
     this.user.name = username
   },
-  Todo: {
-    list: [] as Item[],
-    get doneCount() {
-      return this.list.filter(v => v.done).length
-    },
-    setList(list: Item[]) {
-      this.list = list
-    },
-    addItem(text: string) {
-      this.list.push({
-        text, done: false
-      })
-    },
-    async $fetchList() {
-      const list = await request('/api/get-list')
-      this.setList(list)
-    }
-  }
+  Todo: todoModule
 }
 
-const store = createStore(modules)
+import { createStore } from 'vuestore'
+const store = createStore(modules, {
+  strict: true,
+  plugins: [
+    store => {
+      store.subscribe((type, actionType, payload) => {
+        if (type) {
+          console.log('mutation called: ' + type)
+        } else {
+          console.log('action called: ' + actionType)
+        }
+      })
+    }
+  ]
+})
 
 store.Todo.doneCount // equals to `store.getters['Todo/doneCount']`
 store.Todo.addItem('new item') // equals to `store.commit('Todo/addItem', 'new item')`
@@ -48,14 +64,15 @@ export default store
 ```
 
 ### api
-* `store = createStore(modules)`
-* `store.watch(fn, cb)`
+* `store = createStore(modules, options)`
+* `store.watch(getter, callback)`
 * `store.subscribe(listener)`
 * `store.addModule(modulePath, module)`
 * `store.removeModule(modulePath)`
 * `store.replaceState(newState)`
+* `store.getState()`
 
-### convention
+### convention(compulsory in fact)
 1. name of sub-module(namespace) starts with **capital letter**
 2. name of action method(with side-effect) starts with **'$'**
 3. getter property will be taken as 'getters'
