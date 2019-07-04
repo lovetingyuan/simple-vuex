@@ -20,7 +20,8 @@ interface Base<Y> {
   removeModule: (path: string) => void
   subscribe: (listener: (arg: SubData) => any) => () => void
   replaceState: (state: MyModule) => void
-  watch<T>(fn: (this: Y) => T, cb: (value: T, oldValue: T) => void, options?: WatchOptions): () => void;
+  watch<T>(fn: (this: Y) => T, cb: (value: T, oldValue: T) => void, options?: WatchOptions): () => void
+  getState: () => any
 }
 
 export default function createVueStore<M extends MyModule>(modules: M, option?: Options) {
@@ -81,6 +82,12 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
     watch(fn, cb, option) {
       const getter = fn.bind(stateGetters)
       return eventBus.$watch(getter as any, cb, option)
+    },
+    getState() {
+      if (process.env.NODE_ENV !== 'development') {
+        console.warn('Only use getState in development mode.')
+      }
+      return JSON.parse(JSON.stringify(state))
     }
   }
   function _createStore<M extends MyModule>(Modules: M, routes: string[] = []) {
@@ -174,6 +181,13 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
         throw new Error('Only mutation could change state.')
       }
     }, { deep: true, sync: true } as any)
+  }
+  if (option && Array.isArray(option.plugins)) {
+    option.plugins.forEach(plugin => {
+      if (typeof plugin === 'function') {
+        plugin(store)
+      }
+    })
   }
   return store as (M & Base<M>)
 }

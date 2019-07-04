@@ -56,6 +56,7 @@ export default class HelloWorld extends Vue {
         list: ['34fsd']
       }
     })
+    console.log(2121, store.getState())
     // store.watch(function () {
     //   return this
     // }, function (newV, old) {
