@@ -204,6 +204,9 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
 
 export default class VueStorePlugin {
   static install(vue: typeof _Vue) {
+    if (Vue && Vue === vue) {
+      console.warn('do not repeat to install this plugin.')
+    }
     Vue = vue
   }
   static createVueStore = createVueStore
