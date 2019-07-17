@@ -1,72 +1,22 @@
-type Item = {id: number, content: string}
+import Vue from 'vue'
+import VueStore from '../../lib/vue-store'
 
-interface Modules {
-  user: {
-    name: string
-  }
-  title: string
-  Todo: {
-    list: Item[]
-    count: number
-    setItem: (p: Item | Item[]) => void
-    deleteItem: (p: number) => void
-    $fetchItems: () => Promise<any>
-    Important: {
-      event: string
-      setContent: (e: string) => void
-    },
-    Dynamic?: {
-      aa: string,
-      setaa: (a: string) => void
-    }
-  },
-}
+Vue.use(VueStore)
 
+import CounterModule from '@/modules/counterModule'
+import TodoListModule from '@/modules/todoListModule'
 
-const modules: Modules = {
+const store = VueStore.createVueStore({
   user: {
     name: 'tingyuan',
+    age: 12
   },
-  get title () {
-    return `todo list(${this.Todo.count})`
-  },
-  Todo: {
-    list: [],
-    get count() {
-      return this.list.length
-    },
-    setItem(item) {
-      if (Array.isArray(item)) {
-        this.list = item
-      } else {
-        this.list.push(item)
-      }
-    },
-    deleteItem(id) {
-      this.list = this.list.filter(v => v.id !== id)
-    },
-    async $fetchItems() {
-      await new Promise(r => setTimeout(r, 2000))
-      this.setItem([
-        {id: 1, content: 'item 1'},
-        {id: 2, content: 'item 2'}
-      ])
-    },
-    Important: {
-      event: '',
-      setContent(event) {
-        this.event = event
-      }
-    },
-  },
-}
-
-import createVuexStore from '../../lib/createVuexStore'
-
-const store = createVuexStore(modules, {
-  strict: true
+  Counter: CounterModule,
+  Todo: TodoListModule
+}, {
+  strict: process.env.NODE_ENV === 'development'
 })
 
-console.log("vuex store: ", store)
+Vue.prototype.$vueStore = store
 
 export default store

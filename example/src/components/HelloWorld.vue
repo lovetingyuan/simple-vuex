@@ -1,75 +1,46 @@
 <template>
-
-  <div class="todo-list">
-    <my-comp></my-comp>
-    <!-- <h1>{{ $Store.title }}</h1> -->
-    <div>
-      <input v-model.trim="newItem" placeholder="please enter">&nbsp;&nbsp;
-      <button @click="onAdd">add</button>&nbsp;
-      <button @click="onAddImportant">add as important</button>
-    </div>
-    <h3>Most important item 🌟: {{ todoModule.Important.event || 'None' }}</h3>
-    <p v-if="loading">loading...</p>
-    <ol v-if="todoModule.list.length">
-      <li v-for="item in todoModule.list" :key="item.id">
-        {{item.content}}<a href="javascript:" @click="onRemove(item)">&nbsp;&nbsp;❌</a>
-      </li>
-    </ol>
-    <em v-else>nothing here</em>
+  <div class="hello">
+    <h1>Hello {{$vueStore.user.name}}! <br> {{ msg }}</h1>
+    <p>
+      For a guide and recipes on how to configure / customize this project,<br>
+      check out the
+      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
+    </p>
+    <h3>Installed CLI Plugins</h3>
+    <ul>
+      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
+      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-typescript" target="_blank" rel="noopener">typescript</a></li>
+      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-pwa" target="_blank" rel="noopener">pwa</a></li>
+      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
+    </ul>
+    <h3>Essential Links</h3>
+    <ul>
+      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
+      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
+      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
+      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
+      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
+    </ul>
+    <h3>Ecosystem</h3>
+    <ul>
+      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
+      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
+      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
+      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
+      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
+    </ul>
   </div>
 </template>
 
 <script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator'
-import store from '../store'
+import Vue from 'vue'
 
-import MyComp from './MyComp.vue'
-
-type Item = typeof store.Todo.list[0]
-type DynamicType = typeof store.Todo.Dynamic & {}
-
-store.addModule('Todo.Dynamic', {
-  aa: 'assa657',
-  setaa (p) {
-    console.log(22, this)
-    this.aa = p
+export default Vue.extend({
+  name: 'HelloWorld',
+  props: {
+    msg: String
   }
-} as DynamicType)
-
-@Component({
-  components: { MyComp }
 })
-export default class HelloWorld extends Vue {
-  private newItem = ''
-  private loading = false
-  private todoModule = store.Todo
-  private dynamicModule = store.Todo.Dynamic as DynamicType
-  private onAdd () {
-    this.newItem && this.todoModule.setItem({
-      id: Math.random(),
-      content: this.newItem
-    })
-    this.newItem = ''
-  }
-  private onRemove (item: Item) {
-    if (confirm('are you sure to delete ' + item.content)) {
-      this.todoModule.deleteItem(item.id)
-    }
-  }
-  private onAddImportant () {
-    this.newItem && this.todoModule.Important.setContent(this.newItem)
-    this.newItem = ''
-  }
-  private mounted () {
-    this.loading = true
-    this.todoModule.$fetchItems().finally(() => {
-      this.loading = false
-      setTimeout(() => {
-        this.dynamicModule.setaa('newadddd')
-      }, 100)
-    })
-  }
-}
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
@@ -77,18 +48,15 @@ export default class HelloWorld extends Vue {
 h3 {
   margin: 40px 0 0;
 }
-a {
-  text-decoration: none;
+ul {
+  list-style-type: none;
+  padding: 0;
 }
 li {
-  margin: 18px 0;
+  display: inline-block;
+  margin: 0 10px;
 }
-input {
-  height: 16px;
-  padding: 5px 8px;
-}
-button {
-  padding: 6px 20px;
-  cursor: pointer;
+a {
+  color: #42b983;
 }
 </style>

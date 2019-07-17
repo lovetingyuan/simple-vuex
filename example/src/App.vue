@@ -1,39 +1,43 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+    <div id="nav">
+      <router-link to="/">Home</router-link> |
+      <router-link to="/counter">Counter</router-link> |
+      <router-link to="/todo-list">Todo-List</router-link>
+    </div>
+    <router-view/>
   </div>
 </template>
-
-<script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
-import HelloWorld from './components/HelloWorld.vue'
-
-@Component({
-  components: {
-    HelloWorld
-  }
-})
-export default class App extends Vue {
-  data () {
-    return {}
-  }
-  created () {
-    console.log('APP', this)
-  }
-}
-</script>
 
 <style>
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
 }
-img {
-  display: block;
-  margin: 0 auto;
+#nav {
+  padding: 30px;
+}
+
+#nav a {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+#nav a.router-link-exact-active {
+  color: #42b983;
+}
+h1 {
+  text-transform: capitalize;
+}
+input {
+  padding: 8px 10px;
+  margin: 0 20px;
+}
+button {
+  padding: 8px 20px;
+  margin: 0 10px;
 }
 </style>
