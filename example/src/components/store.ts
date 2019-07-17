@@ -33,7 +33,7 @@ const modules = {
   }
 }
 
-import VueStorePlugin from '../../../lib/createVueStore'
+import VueStorePlugin from '../../../lib/vue-store'
 import Vue from 'vue'
 
 Vue.use(VueStorePlugin)

@@ -40,8 +40,12 @@ const modules = {
   Todo: todoModule
 }
 
-import { createStore } from 'vuestore'
-const store = createStore(modules, {
+import Vue from 'vue'
+import VueStore from 'vuestore'
+
+Vue.use(VueStore)
+
+const store = VueStore.createVueStore(modules, {
   strict: true,
   plugins: [
     store => {
@@ -64,7 +68,7 @@ export default store
 ```
 
 ### api
-* `store = createStore(modules, options)`
+* `store = VueStore.createVueStore(modules, options)`
 * `store.watch(getter, callback)`
 * `store.subscribe(listener)`
 * `store.addModule(modulePath, module)`
