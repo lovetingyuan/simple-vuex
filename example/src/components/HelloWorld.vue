@@ -2,7 +2,7 @@
 
   <div class="todo-list">
     <my-comp></my-comp>
-    <h1>{{ $Store.title }}</h1>
+    <!-- <h1>{{ $Store.title }}</h1> -->
     <div>
       <input v-model.trim="newItem" placeholder="please enter">&nbsp;&nbsp;
       <button @click="onAdd">add</button>&nbsp;
@@ -21,7 +21,7 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
-import store from '@/store'
+import store from '../store'
 
 import MyComp from './MyComp.vue'
 

@@ -61,7 +61,7 @@ const modules: Modules = {
   },
 }
 
-import createVuexStore from '../lib/createVuexStore'
+import createVuexStore from '../../lib/createVuexStore'
 
 const store = createVuexStore(modules, {
   strict: true
@@ -70,9 +70,3 @@ const store = createVuexStore(modules, {
 console.log("vuex store: ", store)
 
 export default store
-
-declare module "vue/types/vue" {
-  interface Vue {
-    $Store: typeof store
-  }
-}

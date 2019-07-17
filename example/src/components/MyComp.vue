@@ -12,8 +12,8 @@
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import store from './store'
-store.subscribe(function () {
-  console.log(arguments)
+store.subscribe(function (data, state) {
+  console.log(data, state)
 })
 console.log('vue store', store)
 

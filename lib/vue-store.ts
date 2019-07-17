@@ -1,37 +1,43 @@
-import Vue, { ComponentOptions, WatchOptions } from 'vue'
-import { StoreOptions } from 'vuex'
-
-interface MyModule {
+import _Vue, { ComponentOptions, WatchOptions } from 'vue'
+interface CommonModule {
   [k: string]: any
 }
 
-type Options = Pick<StoreOptions<any>, 'plugins' | 'strict'>
-
-type SubData = {
+type ListenerData = {
   type: string
   payload: any
-} | {
+} & {
   actionType: string
   payload: any
 }
 
-interface Base<Y> {
+type VueStoreOptions<S> = {
+  strict?: boolean
+  plugins?: ((store: S) => any)[]
+}
+
+interface StoreProto<Y> {
   addModule: <T>(path: string, _module: T) => T
   removeModule: (path: string) => void
-  subscribe: (listener: (arg: SubData) => any) => () => void
-  replaceState: (state: MyModule) => void
-  watch<T>(fn: (this: Y) => T, cb: (value: T, oldValue: T) => void, options?: WatchOptions): () => void
+  subscribe: (listener: (arg: ListenerData, state: Y) => any) => () => void
+  replaceState: (state: CommonModule) => void
+  watch<T>(fn: (this: Y) => T, cb: (value?: T, oldValue?: T) => void, options?: WatchOptions): () => void
   getState: () => any
 }
 
-export default function createVueStore<M extends MyModule>(modules: M, option?: Options) {
+let Vue!: typeof _Vue
+
+function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOptions<M & StoreProto<M>>) {
+  if (!Vue) {
+    throw new Error('please install VueStorePlugin first.')
+  }
   let isCommitting = false
   let isGetting = false
   let isReplacing = false
   let subscribeName = ''
   const eventBus = new Vue()
-  const base: Base<M> = {
-    addModule(path: string, _module: MyModule) {
+  const base: StoreProto<M> = {
+    addModule(path: string, _module: CommonModule) {
       const routes = path.split('.')
       const moduleName = routes.pop() as string
       let parentModule: any = store
@@ -57,14 +63,16 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
       delete parentModule[moduleName]
     },
     subscribe(listener) {
-      subscribeName = '$$store-mutation-event'
-      const _listener = (data: SubData) => listener(data)
+      subscribeName = 'vue-store-mutation-action-event'
+      const _listener = (data: ListenerData, state: M) => {
+        listener(data, state)
+      }
       eventBus.$on(subscribeName, _listener)
       return () => eventBus.$off(subscribeName, _listener)
     },
     replaceState(state, _store = store) {
       isReplacing = true
-      const vueInstance: Vue = _store.__vue__
+      const vueInstance: InstanceType<typeof _Vue> = _store.__vue__
       Object.keys(state).forEach(key => {
         if (/[A-Z]/.test(key[0])) {
           const replaceState: any = base.replaceState
@@ -90,11 +98,11 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
       return JSON.parse(JSON.stringify(state))
     }
   }
-  function _createStore<M extends MyModule>(Modules: M, routes: string[] = []) {
-    const vueOption: ComponentOptions<Vue> = { data: {} }
+  function _createStore<M extends CommonModule>(Modules: M, routes: string[] = []) {
+    const vueOption: ComponentOptions<_Vue> = { data: {} }
     const Module: any = routes.length ? {} : Object.create(base)
-    const state: MyModule = {}
-    const stateGetters: MyModule = {}
+    const state: CommonModule = {}
+    const stateGetters: CommonModule = {}
     const routesPath = routes.join('/')
     Object.keys(Modules).forEach(key => {
       const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
@@ -133,7 +141,7 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
             subscribeName && eventBus.$emit(subscribeName, {
               actionType: routesPath ? `${routesPath}/${key}` : key,
               payload
-            })
+            }, state)
             return Modules[key].call(Module, payload)
           }
           Module[key] = function (payload: any) {
@@ -148,7 +156,7 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
             subscribeName && eventBus.$emit(subscribeName, {
               type: routesPath ? `${routesPath}/${key}` : key,
               payload
-            })
+            }, state)
             Modules[key].call(state, payload)
             isCommitting = false
           }
@@ -174,8 +182,12 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
     Object.defineProperty(Module, '__vue__', { value: vueModule })
     return [Module, state, stateGetters]
   }
-  const [store, state, stateGetters] = _createStore(modules)
+  const [_store, state, stateGetters] = _createStore(modules)
+  const store = _store as (M & StoreProto<M>);
   if (option && option.strict) {
+    if (process.env.NODE_ENV !== 'development') {
+      console.warn('Only use strict option in development mode.')
+    }
     eventBus.$watch(() => state, () => {
       if (!isCommitting && !isReplacing) {
         throw new Error('Only mutation could change state.')
@@ -184,10 +196,15 @@ export default function createVueStore<M extends MyModule>(modules: M, option?: 
   }
   if (option && Array.isArray(option.plugins)) {
     option.plugins.forEach(plugin => {
-      if (typeof plugin === 'function') {
-        plugin(store)
-      }
+      typeof plugin === 'function' && plugin(store)
     })
   }
-  return store as (M & Base<M>)
+  return store
+}
+
+export default class VueStorePlugin {
+  static install(vue: typeof _Vue) {
+    Vue = vue
+  }
+  static createVueStore = createVueStore
 }

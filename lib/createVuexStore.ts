@@ -131,6 +131,6 @@ export default function createVuexStore<M extends MyModule> (modules: M, options
   const storeOptions = normalizeModule(modules, patchedModule, patchedData)
   Vue.use(Vuex)
   const store = new Vuex.Store(Object.assign(storeOptions, options))
-  Vue.prototype.$Store = patchedModule
+  // Vue.prototype.$Store = patchedModule
   return patchedModule as StoreType<M>
 }

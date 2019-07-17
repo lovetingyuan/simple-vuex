@@ -33,8 +33,11 @@ const modules = {
   }
 }
 
-import createVueStore from '../../lib/createVueStore'
+import VueStorePlugin from '../../../lib/createVueStore'
+import Vue from 'vue'
 
-export default createVueStore(modules, {
-  strict: true
+Vue.use(VueStorePlugin)
+
+export default VueStorePlugin.createVueStore(modules, {
+  strict: process.env.NODE_ENV === 'development'
 })
