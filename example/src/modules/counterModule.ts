@@ -13,7 +13,7 @@ export default {
     // mock async action
     return new Promise((resolve) => {
       setTimeout(() => {
-        const random = parseInt(Math.random() * 20 + '')
+        const random = parseInt(Math.random() * 200 + '')
         this.reset(random)
         resolve()
       }, 1500)

@@ -3,8 +3,8 @@
     <h1>number counter</h1>
     <input type="number" v-model.number="count">
     <button @click="onAddOne">add one</button>
-    <button @click="onDouble">double</button>
-    <button @click="onRandom">async random</button>
+    <button @dblclick="onDouble">double click</button>
+    <button @click="onRandom" :disabled="loading">async random</button>
 
   </div>
 </template>
@@ -14,13 +14,18 @@ import Vue from 'vue'
 import store from '../store'
 
 export default Vue.extend({
+  data() {
+    return {
+      loading: false
+    }
+  },
   computed: {
     count: {
       get () {
         return store.Counter.count
       },
-      set (value) {
-        store.Counter.reset(value as number)
+      set (value: number) {
+        store.Counter.reset(value)
       }
     }
   },
@@ -32,7 +37,10 @@ export default Vue.extend({
       store.Counter.double()
     },
     onRandom() {
-      store.Counter.$asyncNumber()
+      this.loading = true
+      store.Counter.$asyncNumber().finally(() => {
+        this.loading = false
+      })
     }
   }
 })

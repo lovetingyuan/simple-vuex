@@ -4,13 +4,29 @@ type Item = {
   id: number
 }
 
+enum Status {
+  ALL = 'all',
+  DONE = 'done',
+  UNDONE = 'undone'
+}
+
 export default {
   list: [] as Item[],
+  status: 'all' as Status,
+  get displayList() {
+    if (this.status === Status.ALL) {
+      return this.list
+    }
+    return this.list.filter(v => this.status === Status.DONE ? v.done : !v.done)
+  },
   get doneCount() {
     return this.list.filter(v => v.done).length
   },
   setList(list: Item[]) {
     this.list = list
+  },
+  setStatus(type: Status) {
+    this.status = type
   },
   add(text: string) {
     this.list.push({
