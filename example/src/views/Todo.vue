@@ -12,10 +12,14 @@
       <ol v-if="list.length" class="list">
         <li v-for="item in list" :key="item.id" class="item">
           <span @click="onSwitch(item)"
+            v-if="editId !== item.id"
             :class="{done: item.done}">
             {{item.text}}
-          </span>&nbsp;
-          <i @click="onDelete(item)">✗</i>
+          </span>
+          <input type="text" autofocus v-else @change="onEdit" :value="item.text">
+          &nbsp;
+          <i @click="onDelete(item)">✗</i>&nbsp;
+          <i @click="editId = editId ? 0 : item.id" v-if="!item.done">✒️</i>
         </li>
       </ol>
       <div v-else>
@@ -36,7 +40,8 @@ type Status = Parameters<typeof store.Todo.setStatus>[0]
 export default Vue.extend({
   data() {
     return {
-      event: ''
+      event: '',
+      editId: 0
     }
   },
   computed: {
@@ -71,6 +76,16 @@ export default Vue.extend({
     },
     onFilter(type: Status) {
       store.Todo.setStatus(type)
+    },
+    onEdit(evt: Event) {
+      const newText = (evt.target as HTMLInputElement).value.trim()
+      if (newText) {
+        store.Todo.edit({
+          id: this.editId,
+          text: newText
+        })
+      }
+      this.editId = 0
     }
   },
   created() {
@@ -97,5 +112,8 @@ export default Vue.extend({
 }
 .active {
   color: yellowgreen;
+}
+i {
+  cursor: pointer;
 }
 </style>

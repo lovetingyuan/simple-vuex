@@ -42,6 +42,12 @@ export default {
       item.done = !item.done
     }
   },
+  edit({ id, text }: {id: number, text: string}) {
+    const item = this.list.find(v => v.id === id)
+    if (item) {
+      item.text = text
+    }
+  },
   $fetchList() {
     return new Promise((resolve) => {
       setTimeout(() => {
