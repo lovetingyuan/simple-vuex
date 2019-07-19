@@ -2,7 +2,7 @@
   <div class="todo">
     <h1>todo list</h1>
     <input type="text" placeholder="enter whatever" v-model.trim="event" @keyup.enter="onAdd">
-    <button @click="onAdd">add ({{doneCount}}/{{list.length}})</button>
+    <button @click="onAdd">add ({{doneCount}}/{{allCount}})</button>
     <span>
       <a href="javascript:void(0)" :class="{active: filter === 'all'}" @click="onFilter('all')">all</a> |
       <a href="javascript:void(0)" :class="{active: filter === 'done'}" @click="onFilter('done')">done</a> |
@@ -32,10 +32,13 @@
 <script lang="ts">
 import Vue from 'vue'
 import store from '../store'
+import todoModule from '../modules/todoListModule'
 
-type Item = typeof store.Todo.list[0]
+const todoStore = store.Todo || store.addModule('Todo', todoModule)
 
-type Status = Parameters<typeof store.Todo.setStatus>[0]
+type Item = typeof todoModule.list[0]
+
+type Status = Parameters<typeof todoModule.setStatus>[0]
 
 export default Vue.extend({
   data() {
@@ -49,38 +52,41 @@ export default Vue.extend({
       return store.Todo.status
     },
     list() {
-      return store.Todo.displayList
+      return todoStore.displayList
     },
     doneCount() {
-      return store.Todo.doneCount
+      return todoStore.doneCount
+    },
+    allCount() {
+      return todoStore.allCount
     }
   },
   methods: {
     onAdd() {
       if (this.event) {
-        store.Todo.add(this.event)
+        todoStore.add(this.event)
         this.event = ''
       }
     },
     onDelete(item: Item) {
       if (!item.done) {
         if (confirm(`Are you sure to delete: ${item.text} ?`)) {
-          store.Todo.remove(item.id)
+          todoStore.remove(item.id)
         }
       } else {
-        store.Todo.remove(item.id)
+        todoStore.remove(item.id)
       }
     },
     onSwitch(item: Item) {
-      store.Todo.markDone(item.id)
+      todoStore.markDone(item.id)
     },
     onFilter(type: Status) {
-      store.Todo.setStatus(type)
+      todoStore.setStatus(type)
     },
     onEdit(evt: Event) {
       const newText = (evt.target as HTMLInputElement).value.trim()
       if (newText) {
-        store.Todo.edit({
+        todoStore.edit({
           id: this.editId,
           text: newText
         })
@@ -89,8 +95,8 @@ export default Vue.extend({
     }
   },
   created() {
-    if (!store.Todo.list.length) {
-      store.Todo.$fetchList()
+    if (!todoStore.list.length) {
+      todoStore.$fetchList()
     }
   }
 })

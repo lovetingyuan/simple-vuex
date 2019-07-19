@@ -107,6 +107,7 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
     Object.keys(Modules).forEach(key => {
       const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
       if (/[A-Z]/.test(key[0])) {
+        if (!Modules[key]) return
         const [_Module, _state, _stateGetters] = _createStore(Modules[key], routes.concat(key))
         Module[key] = _Module
         state[key] = _state

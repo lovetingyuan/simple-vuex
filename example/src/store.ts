@@ -4,7 +4,7 @@ import VueStore from '../../lib/vue-store'
 Vue.use(VueStore)
 
 import CounterModule from '@/modules/counterModule'
-import TodoListModule from '@/modules/todoListModule'
+import { TodoModuleType } from '@/modules/todoListModule'
 
 const store = VueStore.createVueStore({
   user: {
@@ -12,7 +12,7 @@ const store = VueStore.createVueStore({
     age: 12
   },
   Counter: CounterModule,
-  Todo: TodoListModule
+  Todo: null as unknown as TodoModuleType
 }, {
   strict: process.env.NODE_ENV === 'development'
 })

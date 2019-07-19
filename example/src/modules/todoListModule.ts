@@ -10,7 +10,7 @@ enum Status {
   UNDONE = 'undone'
 }
 
-export default {
+const todoModule = {
   list: [] as Item[],
   status: 'all' as Status,
   get displayList() {
@@ -18,6 +18,9 @@ export default {
       return this.list
     }
     return this.list.filter(v => this.status === Status.DONE ? v.done : !v.done)
+  },
+  get allCount() {
+    return this.list.length
   },
   get doneCount() {
     return this.list.filter(v => v.done).length
@@ -62,3 +65,5 @@ export default {
     })
   }
 }
+export default todoModule
+export type TodoModuleType = typeof todoModule
