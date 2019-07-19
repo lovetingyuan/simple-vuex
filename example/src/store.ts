@@ -17,6 +17,4 @@ const store = VueStore.createVueStore({
   strict: process.env.NODE_ENV === 'development'
 })
 
-Vue.prototype.$vueStore = store
-
 export default store
