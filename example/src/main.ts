@@ -7,6 +7,7 @@ import './registerServiceWorker'
 
 Vue.config.productionTip = false
 Vue.prototype.$vueStore = store
+console.log(store)
 
 new Vue({
   router,

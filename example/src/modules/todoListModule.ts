@@ -40,6 +40,7 @@ const todoModule = {
     this.list = this.list.filter(v => v.id !== id)
   },
   markDone(id: number) {
+    console.log(id + 'yes88', this)
     const item = this.list.find(v => v.id === id)
     if (item) {
       item.done = !item.done

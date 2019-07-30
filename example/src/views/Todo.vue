@@ -18,21 +18,19 @@
       </a>
     </span>
     <div style="padding: 50px;">
-      <!-- <ol v-if="list.length" class="list"> -->
-        <transition-group name="slide-fade" tag="ol" v-if="list.length" class="list">
-          <li v-for="item in list" :key="item.id" class="item">
-            <span @click="onSwitch(item)"
-              v-if="editId !== item.id"
-              :class="{done: item.done}">
-              {{item.text}}
-            </span>
-            <input type="text" autofocus v-else @change="onEdit" :value="item.text">
-            &nbsp;
-            <i @click="onDelete(item)">✗</i>&nbsp;
-            <i @click="editId = editId ? 0 : item.id" v-if="!item.done">✒️</i>
-          </li>
-        </transition-group>
-      <!-- </ol> -->
+      <transition-group name="slide-fade" tag="ol" v-if="list.length" class="list">
+        <li v-for="item in list" :key="item.id" class="item">
+          <span @click="onSwitch(item)"
+            v-if="editId !== item.id"
+            :class="{done: item.done}">
+            {{item.text}}
+          </span>
+          <input type="text" autofocus v-else @change="onEdit" :value="item.text">
+          &nbsp;
+          <i @click="onDelete(item)">✗</i>&nbsp;
+          <i @click="editId = editId ? 0 : item.id" v-if="!item.done">✒️</i>
+        </li>
+      </transition-group>
       <div v-else>
         empty list, please add
       </div>
@@ -50,6 +48,13 @@ const todoStore = store.Todo || store.addModule('Todo', todoModule)
 type Item = typeof todoModule.list[0]
 
 type Status = Parameters<typeof todoModule.setStatus>[0]
+
+
+if (module.hot) {
+  module.hot.accept('@/modules/todoListModule', () => {
+    store.hotUpdate('Todo', require('@/modules/todoListModule').default)
+  })
+}
 
 export default Vue.extend({
   data() {

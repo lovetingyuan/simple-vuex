@@ -23,6 +23,7 @@ interface StoreProto<Y> {
   replaceState: (state: CommonModule) => void
   watch<T>(fn: (this: Y) => T, cb: (value?: T, oldValue?: T) => void, options?: WatchOptions): () => void
   getState: () => any
+  hotUpdate: ((_module: CommonModule) => any ) | ((path: string, _module: CommonModule) => any)
 }
 
 let Vue!: typeof _Vue
@@ -81,8 +82,11 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
           } else {
             throw new Error(`sub module ${key} not exist`)
           }
-        } else {
-          vueInstance.$set(vueInstance, key, state[key])
+        } else if (typeof state[key] !== 'function') {
+          const getter = (Object.getOwnPropertyDescriptor(state, key) as PropertyDescriptor).get
+          if (typeof getter !== 'function') {
+            vueInstance.$set(vueInstance, key, state[key])
+          }
         }
       })
       isReplacing = false
@@ -96,87 +100,127 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
         console.warn('Only use getState in development mode.')
       }
       return JSON.parse(JSON.stringify(state))
+    },
+    hotUpdate(path, _module) {
+      const newModule = typeof path === 'string' ? _module : path
+      const routesPath = typeof path === 'string' ? path : ''
+      const routes = routesPath.split('/')
+      let Module: CommonModule = store
+      routes.forEach(r => {
+        Module = Module[r]
+      })
+      Object.keys(Module).forEach(k => {
+        if (Module[k] === 'function') {
+          delete Module[k]
+        }
+      })
+      Object.keys(newModule).forEach(key => {
+        if (/[A-Z]/.test(key[0])) {
+          const hotUpdate: any = base.hotUpdate
+          hotUpdate(routesPath + '/' + key, newModule[key])
+        } else if (typeof newModule[key] === 'function') {
+          if (key[0] === '$') {
+            Module[key] = function (payload: any) {
+              if (subscribeName) {
+                eventBus.$emit(subscribeName, {
+                  actionType: routesPath ? `${routesPath}/${key}` : key,
+                  payload
+                }, state)
+              }
+              return newModule[key].call(Module, payload)
+            }
+          } else {
+            Module[key] = function (payload: any) {
+              isCommitting = true
+              if (subscribeName) {
+                eventBus.$emit(subscribeName, {
+                  type: routesPath ? `${routesPath}/${key}` : key,
+                  payload
+                }, state)
+              }
+              newModule[key].call(Module.__vue__.$options.__state__, payload)
+              isCommitting = false
+            }
+          }
+        } else {
+          const getter = (Object.getOwnPropertyDescriptor(newModule, key) as PropertyDescriptor).get
+          if (typeof getter === 'function') {
+            // Object.defineProperty()
+          }
+        }
+      })
     }
   }
   function _createStore<M extends CommonModule>(Modules: M, routes: string[] = []) {
-    const vueOption: ComponentOptions<_Vue> = { data: {} }
     const Module: any = routes.length ? {} : Object.create(base)
     const state: CommonModule = {}
     const stateGetters: CommonModule = {}
+    const vueOption: ComponentOptions<_Vue> & {
+      __state__: any,
+      __stateGetters__: any
+    } = { __state__: state, __stateGetters__: stateGetters, data: {} }
     const routesPath = routes.join('/')
     Object.keys(Modules).forEach(key => {
-      const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
       if (/[A-Z]/.test(key[0])) {
         if (!Modules[key]) return
         const [_Module, _state, _stateGetters] = _createStore(Modules[key], routes.concat(key))
         Module[key] = _Module
         state[key] = _state
         stateGetters[key] = _stateGetters
-      } else if (typeof getter === 'function') {
-        vueOption.computed = vueOption.computed || {}
-        vueOption.computed[key] = function () {
-          if (isCommitting) {
-            throw new Error(`do not call getter ${key} in mutation`)
-          }
-          isGetting = true
-          const ret = getter.call(stateGetters)
-          isGetting = false
-          return ret
-        }
-        const descriptor = {
-          get() { return vueModule[key] },
-          enumerable: true
-        }
-        Object.defineProperty(stateGetters, key, descriptor)
-        Object.defineProperty(Module, key, descriptor)
       } else if (typeof Modules[key] === 'function') {
         vueOption.methods = vueOption.methods || {}
         if (key[0] === '$') {
-          vueOption.methods[key] = function (payload: any) {
-            if (isCommitting) {
-              throw new Error(`do not call action ${routes.join('.')}.${key} in mutation`)
+          Module[key] = function (payload: any) {
+            if (subscribeName) {
+              eventBus.$emit(subscribeName, {
+                actionType: routesPath ? `${routesPath}/${key}` : key,
+                payload
+              }, state)
             }
-            if (isGetting) {
-              throw new Error(`do not call action ${routes.join('.')}.${key} in getter`)
-            }
-            subscribeName && eventBus.$emit(subscribeName, {
-              actionType: routesPath ? `${routesPath}/${key}` : key,
-              payload
-            }, state)
             return Modules[key].call(Module, payload)
           }
-          Module[key] = function (payload: any) {
-            return vueModule[key](payload)
-          }
         } else {
-          vueOption.methods[key] = function (payload: any) {
-            if (isGetting) {
-              throw new Error(`do not call mutation ${key} in getter`)
-            }
+          Module[key] = function (payload: any) {
             isCommitting = true
-            subscribeName && eventBus.$emit(subscribeName, {
-              type: routesPath ? `${routesPath}/${key}` : key,
-              payload
-            }, state)
+            if (subscribeName) {
+              eventBus.$emit(subscribeName, {
+                type: routesPath ? `${routesPath}/${key}` : key,
+                payload
+              }, state)
+            }
             Modules[key].call(state, payload)
             isCommitting = false
           }
-          Module[key] = function (payload: any) {
-            vueModule[key](payload)
-          }
         }
       } else {
-        (vueOption.data as any)[key] = Modules[key]
-        const descriptor = {
-          get() { return vueModule[key] },
-          set(val: any) {
-            vueModule[key] = val
-          },
-          enumerable: true
+        const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
+        if (typeof getter === 'function') {
+          vueOption.computed = vueOption.computed || {}
+          vueOption.computed[key] = function () {
+            isGetting = true
+            const ret = getter.call(stateGetters)
+            isGetting = false
+            return ret
+          }
+          const descriptor = {
+            get() { return Module.__vue__[key] },
+            enumerable: true
+          }
+          Object.defineProperty(stateGetters, key, descriptor)
+          Object.defineProperty(Module, key, descriptor)
+        } else {
+          (vueOption.data as any)[key] = Modules[key]
+          const descriptor = {
+            get() { return Module.__vue__[key] },
+            set(val: any) {
+              Module.__vue__[key] = val
+            },
+            enumerable: true
+          }
+          Object.defineProperty(state, key, descriptor)
+          Object.defineProperty(stateGetters, key, descriptor)
+          Object.defineProperty(Module, key, descriptor)
         }
-        Object.defineProperty(state, key, descriptor)
-        Object.defineProperty(stateGetters, key, descriptor)
-        Object.defineProperty(Module, key, descriptor)
       }
     })
     let vueModule: any = new Vue(vueOption)
