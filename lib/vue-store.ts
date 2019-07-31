@@ -30,7 +30,7 @@ let Vue!: typeof _Vue
 
 function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOptions<M & StoreProto<M>>) {
   if (!Vue) {
-    throw new Error('please install VueStorePlugin first.')
+    throw new Error('Please install VueStorePlugin first.')
   }
   let isCommitting = false
   let isGetting = false
@@ -48,7 +48,7 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       Object.defineProperty(parentModule, moduleName, {
         value: _createStore(_module, routes.concat(moduleName))[0],
         enumerable: true,
-        configurable: true
+        configurable: true // allow to delete dynamic module
       })
       return parentModule[moduleName]
     },
@@ -60,11 +60,18 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       routes.forEach(r => {
         parentModule = parentModule[r]
       })
-      parentModule[moduleName].__vue__.$destroy()
-      delete parentModule[moduleName]
+      try {
+        const vueIns = parentModule[moduleName].__vue__
+        delete parentModule[moduleName]
+        vueIns.$destroy()
+      } catch {
+        throw new Error(`Only dynamic module can be removed while ${path} is an initial module.`)
+      }
     },
     subscribe(listener) {
-      subscribeName = 'vue-store-mutation-action-event'
+      if (!subscribeName) {
+        subscribeName = 'vuestore-mutation-action-subscribe-event'
+      }
       const _listener = (data: ListenerData, state: M) => {
         listener(data, state)
       }
@@ -80,11 +87,11 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
           if (_store[key]) {
             replaceState(state[key], _store[key])
           } else {
-            throw new Error(`sub module ${key} not exist`)
+            throw new Error(`Namespace sub module ${key} does not exist`)
           }
-        } else if (typeof state[key] !== 'function') {
+        } else { // avoid to trigger getter
           const getter = (Object.getOwnPropertyDescriptor(state, key) as PropertyDescriptor).get
-          if (typeof getter !== 'function') {
+          if (typeof getter !== 'function' && typeof state[key] !== 'function') {
             vueInstance.$set(vueInstance, key, state[key])
           }
         }
@@ -118,12 +125,12 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
         if (/[A-Z]/.test(key[0])) {
           const hotUpdate: any = base.hotUpdate
           hotUpdate(routesPath + '/' + key, newModule[key])
-        } else if (typeof newModule[key] === 'function') {
-          Module.__module__[key] = newModule[key]
         } else {
           const getter = (Object.getOwnPropertyDescriptor(newModule, key) as PropertyDescriptor).get
           if (typeof getter === 'function') {
             Module.__module__[key] = getter
+          } else if (typeof newModule[key] === 'function') {
+            Module.__module__[key] = newModule[key]
           }
         }
       })
@@ -142,34 +149,13 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       if (/[A-Z]/.test(key[0])) {
         if (!Modules[key]) return
         const [_Module, _state, _stateGetters] = _createStore(Modules[key], routes.concat(key))
-        Module[key] = _Module
+        Object.defineProperty(Module, key, {
+          value: _Module,
+          enumerable: true,
+          configurable: false
+        })
         state[key] = _state
         stateGetters[key] = _stateGetters
-      } else if (typeof Modules[key] === 'function') {
-        vueOption.methods = vueOption.methods || {}
-        if (key[0] === '$') {
-          Module[key] = function (payload: any) {
-            if (subscribeName) {
-              eventBus.$emit(subscribeName, {
-                actionType: routesPath ? `${routesPath}/${key}` : key,
-                payload
-              }, state)
-            }
-            return Modules[key].call(Module, payload)
-          }
-        } else {
-          Module[key] = function (payload: any) {
-            isCommitting = true
-            if (subscribeName) {
-              eventBus.$emit(subscribeName, {
-                type: routesPath ? `${routesPath}/${key}` : key,
-                payload
-              }, state)
-            }
-            Modules[key].call(state, payload)
-            isCommitting = false
-          }
-        }
       } else {
         const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
         if (typeof getter === 'function') {
@@ -188,6 +174,31 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
           }
           Object.defineProperty(stateGetters, key, descriptor)
           Object.defineProperty(Module, key, descriptor)
+        } else if (typeof Modules[key] === 'function') {
+          vueOption.methods = vueOption.methods || {}
+          if (key[0] === '$') {
+            Module[key] = function (payload: any) {
+              if (subscribeName) {
+                eventBus.$emit(subscribeName, {
+                  actionType: routesPath ? `${routesPath}/${key}` : key,
+                  payload
+                }, state)
+              }
+              return Modules[key].call(Module, payload)
+            }
+          } else {
+            Module[key] = function (payload: any) {
+              isCommitting = true
+              if (subscribeName) {
+                eventBus.$emit(subscribeName, {
+                  type: routesPath ? `${routesPath}/${key}` : key,
+                  payload
+                }, state)
+              }
+              Modules[key].call(state, payload)
+              isCommitting = false
+            }
+          }
         } else {
           (vueOption.data as any)[key] = Modules[key]
           const descriptor = {
@@ -216,11 +227,13 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
   const store = _store as (M & StoreProto<M>);
   if (option && option.strict) {
     if (process.env.NODE_ENV !== 'development') {
-      console.warn('Only use strict option in development mode.')
+      console.warn('Only use strict option in development mode!')
     }
     eventBus.$watch(() => state, () => {
       if (!isCommitting && !isReplacing) {
-        throw new Error('Only mutation could change state.')
+        setTimeout(() => { // prevent vue to show error
+          throw new Error('Only mutation could change state!')
+        })
       }
     }, { deep: true, sync: true } as any)
   }
@@ -235,7 +248,7 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
 export default class VueStorePlugin {
   static install(vue: typeof _Vue) {
     if (Vue && Vue === vue) {
-      console.warn('do not repeat to install this plugin.')
+      console.warn('Do not install the plugin again.')
     }
     Vue = vue
   }

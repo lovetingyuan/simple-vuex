@@ -56,6 +56,10 @@ if (module.hot) {
   })
 }
 
+setTimeout(() => {
+  store.removeModule('Counter');
+}, 5000);
+
 export default Vue.extend({
   data() {
     return {
