@@ -23,6 +23,7 @@ const todoModule = {
     return this.list.length
   },
   get doneCount() {
+    console.log('done?？')
     return this.list.filter(v => v.done).length
   },
   setList(list: Item[]) {
@@ -40,7 +41,7 @@ const todoModule = {
     this.list = this.list.filter(v => v.id !== id)
   },
   markDone(id: number) {
-    console.log(id + 'yes88', this)
+    console.log(id + 'yes889', this)
     const item = this.list.find(v => v.id === id)
     if (item) {
       item.done = !item.done

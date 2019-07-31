@@ -23,7 +23,7 @@ interface StoreProto<Y> {
   replaceState: (state: CommonModule) => void
   watch<T>(fn: (this: Y) => T, cb: (value?: T, oldValue?: T) => void, options?: WatchOptions): () => void
   getState: () => any
-  hotUpdate: ((_module: CommonModule) => any ) | ((path: string, _module: CommonModule) => any)
+  hotUpdate: (p: string | CommonModule, m: CommonModule) => any
 }
 
 let Vue!: typeof _Vue
@@ -109,9 +109,9 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       routes.forEach(r => {
         Module = Module[r]
       })
-      Object.keys(Module).forEach(k => {
-        if (Module[k] === 'function') {
-          delete Module[k]
+      Object.keys(Module.__module__).forEach(k => {
+        if (typeof Module.__module__[k] === 'function') {
+          delete Module.__module__[k]
         }
       })
       Object.keys(newModule).forEach(key => {
@@ -119,33 +119,11 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
           const hotUpdate: any = base.hotUpdate
           hotUpdate(routesPath + '/' + key, newModule[key])
         } else if (typeof newModule[key] === 'function') {
-          if (key[0] === '$') {
-            Module[key] = function (payload: any) {
-              if (subscribeName) {
-                eventBus.$emit(subscribeName, {
-                  actionType: routesPath ? `${routesPath}/${key}` : key,
-                  payload
-                }, state)
-              }
-              return newModule[key].call(Module, payload)
-            }
-          } else {
-            Module[key] = function (payload: any) {
-              isCommitting = true
-              if (subscribeName) {
-                eventBus.$emit(subscribeName, {
-                  type: routesPath ? `${routesPath}/${key}` : key,
-                  payload
-                }, state)
-              }
-              newModule[key].call(Module.__vue__.$options.__state__, payload)
-              isCommitting = false
-            }
-          }
+          Module.__module__[key] = newModule[key]
         } else {
           const getter = (Object.getOwnPropertyDescriptor(newModule, key) as PropertyDescriptor).get
           if (typeof getter === 'function') {
-            // Object.defineProperty()
+            Module.__module__[key] = getter
           }
         }
       })
@@ -195,15 +173,17 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       } else {
         const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
         if (typeof getter === 'function') {
+          delete Modules[key]
+          ;(Modules as any)[key] = getter
           vueOption.computed = vueOption.computed || {}
           vueOption.computed[key] = function () {
             isGetting = true
-            const ret = getter.call(stateGetters)
+            const value = Modules[key].call(stateGetters)
             isGetting = false
-            return ret
+            return value
           }
           const descriptor = {
-            get() { return Module.__vue__[key] },
+            get() { return vueIns[key] },
             enumerable: true
           }
           Object.defineProperty(stateGetters, key, descriptor)
@@ -211,9 +191,9 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
         } else {
           (vueOption.data as any)[key] = Modules[key]
           const descriptor = {
-            get() { return Module.__vue__[key] },
+            get() { return vueIns[key] },
             set(val: any) {
-              Module.__vue__[key] = val
+              vueIns[key] = val
             },
             enumerable: true
           }
@@ -223,8 +203,13 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
         }
       }
     })
-    let vueModule: any = new Vue(vueOption)
-    Object.defineProperty(Module, '__vue__', { value: vueModule })
+    const vueIns: any = new Vue(vueOption)
+    Object.defineProperty(Module, '__vue__', {
+      value: vueIns
+    })
+    Object.defineProperty(Module, '__module__', {
+      value: Modules,
+    })
     return [Module, state, stateGetters]
   }
   const [_store, state, stateGetters] = _createStore(modules)

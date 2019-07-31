@@ -49,7 +49,7 @@ const store = VueStore.createVueStore(modules, {
   strict: true,
   plugins: [
     store => {
-      store.subscribe((type, actionType, payload) => {
+      store.subscribe(({type, actionType, payload}, state) => {
         if (type) {
           console.log('mutation called: ' + type)
         } else {
@@ -75,6 +75,7 @@ export default store
 * `store.removeModule(modulePath)`
 * `store.replaceState(newState)`
 * `store.getState()`
+* `store.hotUpdate(path, module)`
 
 ### convention(compulsory in fact)
 1. name of sub-module(namespace) starts with **capital letter**

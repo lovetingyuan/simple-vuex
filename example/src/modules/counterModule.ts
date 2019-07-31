@@ -11,6 +11,7 @@ export default {
   },
   $asyncNumber() {
     // mock async action
+    console.log('async number')
     return new Promise((resolve) => {
       setTimeout(() => {
         const random = parseInt(Math.random() * 200 + '')

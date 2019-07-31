@@ -4,6 +4,12 @@ import VueStore from '../../lib/vue-store'
 Vue.use(VueStore)
 
 import CounterModule from '@/modules/counterModule'
+if (module.hot) {
+  module.hot.accept('@/modules/counterModule', () => {
+    store.hotUpdate('Counter', require('@/modules/counterModule').default)
+  })
+}
+
 import { TodoModuleType } from '@/modules/todoListModule'
 
 const store = VueStore.createVueStore({
