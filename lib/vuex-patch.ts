@@ -97,50 +97,9 @@ export default function createVuexStore<M extends MyModule> (modules: M, options
     })
     return vuexModule
   }
-  const base: Base<M> = {
-    get $store() { return store },
-    watch(fn, callback, options) {
-      return store.watch(fn.bind(patchedData), callback, options)
-    },
-    subscribe(sub) {
-      return store.subscribe(sub)
-    },
-    subscribeAction(sub) {
-      return store.subscribeAction(sub)
-    },
-    addModule(router, _module) {
-      let routes = router.split('.')
-      const key = routes.pop() as string
-      let _patchedM = patchedModule
-      let _patchedD = patchedData
-      routes.forEach(r => {
-        _patchedM = _patchedM[r]
-        _patchedD = _patchedD[r]
-      })
-      _patchedM = _patchedM[key] = {}
-      _patchedD = _patchedD[key] = {}
-      const vuexM = normalizeModule(_module, _patchedM, _patchedD, routes.concat(key))
-      store.registerModule(routes.concat(key), vuexM)
-    },
-    removeModule(router) {
-      let routes = router.split('.')
-      store.unregisterModule([...routes])
-      const key = routes.pop() as string
-      let _patchedM = patchedModule
-      let _patchedD = patchedData
-      routes.forEach(r => {
-        _patchedM = _patchedM[r]
-        _patchedD = _patchedD[r]
-      })
-      delete _patchedM[key]
-      delete _patchedD[key]
-    }
-  }
   const patchedModule = Object.create(base)
   const patchedData: MyModule = {}
   const storeOptions = normalizeModule(modules, patchedModule, patchedData)
   Vue.use(Vuex)
   const store = new Vuex.Store(Object.assign(storeOptions, options))
-  // Vue.prototype.$Store = patchedModule
-  return patchedModule as StoreType<M>
-}
+  

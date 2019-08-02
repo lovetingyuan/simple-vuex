@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import VueStore from '../../lib/vue-store'
+import devtoolPlugin from '../../lib/devtool'
 
 Vue.use(VueStore)
 
@@ -20,7 +21,10 @@ const store = VueStore.createVueStore({
   Counter: CounterModule,
   Todo: null as unknown as TodoModuleType
 }, {
-  strict: process.env.NODE_ENV === 'development'
+  strict: process.env.NODE_ENV === 'development',
+  plugins: [
+    devtoolPlugin
+  ]
 })
 
 export default store

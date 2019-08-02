@@ -1,4 +1,5 @@
 import _Vue, { ComponentOptions, WatchOptions } from 'vue'
+
 interface CommonModule {
   [k: string]: any
 }
@@ -13,7 +14,8 @@ type ListenerData = {
 
 type VueStoreOptions<S> = {
   strict?: boolean
-  plugins?: ((store: S) => any)[]
+  plugins?: ((store: S) => any)[],
+  devtools?: boolean
 }
 
 interface StoreProto<Y> {
@@ -242,6 +244,7 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       typeof plugin === 'function' && plugin(store)
     })
   }
+  // const useDevtools = (option && option.devtools !== undefined) ? option.devtools : Vue.config.devtools
   return store
 }
 
