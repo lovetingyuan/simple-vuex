@@ -12,11 +12,7 @@ type ListenerData = {
   payload: any
 }
 
-type VueStoreOptions<S> = {
-  strict?: boolean
-  plugins?: ((store: S) => any)[],
-  devtools?: boolean
-}
+import { VueStoreOptions } from '../types'
 
 interface StoreProto<Y> {
   addModule: <T>(path: string, _module: T) => T
@@ -29,10 +25,11 @@ interface StoreProto<Y> {
 }
 
 let Vue!: typeof _Vue
+const prefix = 'vuestore: '
 
 function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOptions<M & StoreProto<M>>) {
   if (!Vue) {
-    throw new Error('Please install VueStorePlugin first.')
+    throw new Error(prefix + 'Please install VueStorePlugin first.')
   }
   let isCommitting = false
   let isGetting = false
@@ -67,7 +64,7 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
         delete parentModule[moduleName]
         vueIns.$destroy()
       } catch {
-        throw new Error(`Only dynamic module can be removed while ${path} is an initial module.`)
+        throw new Error(prefix + `Only dynamic module can be removed while ${path} is an initial module.`)
       }
     },
     subscribe(listener) {
@@ -89,7 +86,7 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
           if (_store[key]) {
             replaceState(state[key], _store[key])
           } else {
-            throw new Error(`Namespace sub module ${key} does not exist`)
+            throw new Error(prefix + `Namespace sub module ${key} does not exist`)
           }
         } else { // avoid to trigger getter
           const getter = (Object.getOwnPropertyDescriptor(state, key) as PropertyDescriptor).get
@@ -105,8 +102,8 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       return eventBus.$watch(getter as any, cb, option)
     },
     getState() {
-      if (process.env.NODE_ENV !== 'development') {
-        console.warn('Only use getState in development mode.')
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(prefix + 'Only use getState in development mode.')
       }
       return JSON.parse(JSON.stringify(state))
     },
@@ -228,13 +225,13 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
   const [_store, state, stateGetters] = _createStore(modules)
   const store = _store as (M & StoreProto<M>);
   if (option && option.strict) {
-    if (process.env.NODE_ENV !== 'development') {
-      console.warn('Only use strict option in development mode!')
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(prefix + 'Only use strict option in development mode!')
     }
     eventBus.$watch(() => state, () => {
       if (!isCommitting && !isReplacing) {
         setTimeout(() => { // prevent vue to show error
-          throw new Error('Only mutation could change state!')
+          throw new Error(prefix + 'Only mutation could change state!')
         })
       }
     }, { deep: true, sync: true } as any)
@@ -244,16 +241,25 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       typeof plugin === 'function' && plugin(store)
     })
   }
-  // const useDevtools = (option && option.devtools !== undefined) ? option.devtools : Vue.config.devtools
   return store
 }
 
 export default class VueStorePlugin {
   static install(vue: typeof _Vue) {
     if (Vue && Vue === vue) {
-      console.warn('Do not install the plugin again.')
+      console.warn(prefix + 'Do not install the plugin again.')
     }
     Vue = vue
+    Vue.mixin({
+      beforeCreate() {
+        const options: any = this.$options
+        if (options.store) {
+        (this as any).$store = options.store
+        } else if (options.parent && options.parent.$store) {
+          (this as any).$store = options.parent.$store
+        }
+      }
+    })
   }
   static createVueStore = createVueStore
 }

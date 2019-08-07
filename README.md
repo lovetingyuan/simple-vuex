@@ -6,6 +6,11 @@ a simpler way to use redux-like state management in vue project
 * simpler way to write your mutations, getters, actions, no ACTION_TYPE, commit, dispatch
 * better and natural support for typescript
 
+### install
+```bash
+npm install vuestore
+```
+
 ### example
 `store.ts`
 ```typescript

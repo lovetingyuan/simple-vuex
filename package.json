@@ -1,14 +1,19 @@
 {
-  "name": "simple-vuex",
-  "version": "1.0.0",
+  "name": "vuestore",
+  "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "./types/index.ts",
   "directories": {
     "example": "example",
     "lib": "lib"
   },
+  "files": [
+    "dist",
+    "types"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npx rollup -c ./rollup.config.js"
   },
   "repository": {
     "type": "git",
@@ -23,7 +28,13 @@
   "homepage": "https://github.com/lovetingyuan/simple-vuex#readme",
   "dependencies": {
     "@types/node": "^12.6.6",
+    "tslib": "^1.10.0",
     "vue": "^2.6.10",
     "vuex": "^3.1.1"
+  },
+  "devDependencies": {
+    "rollup": "^1.19.4",
+    "rollup-plugin-typescript": "^1.0.1",
+    "typescript": "^3.5.3"
   }
 }
