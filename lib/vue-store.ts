@@ -261,5 +261,5 @@ export default class VueStorePlugin {
       }
     })
   }
-  static createVueStore = createVueStore
+  static createStore = createVueStore
 }

@@ -1,5 +1,3 @@
-'use strict';
-
 var Vue;
 var prefix = 'vuestore: ';
 function createVueStore(modules, option) {
@@ -79,9 +77,6 @@ function createVueStore(modules, option) {
             return eventBus.$watch(getter, cb, option);
         },
         getState: function () {
-            if (process.env.NODE_ENV !== 'production') {
-                console.warn(prefix + 'Only use getState in development mode.');
-            }
             return JSON.parse(JSON.stringify(state));
         },
         hotUpdate: function (path, _module) {
@@ -205,9 +200,6 @@ function createVueStore(modules, option) {
     var _a = _createStore(modules), _store = _a[0], state = _a[1], stateGetters = _a[2];
     var store = _store;
     if (option && option.strict) {
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn(prefix + 'Only use strict option in development mode!');
-        }
         eventBus.$watch(function () { return state; }, function () {
             if (!isCommitting && !isReplacing) {
                 setTimeout(function () {
@@ -247,4 +239,4 @@ var VueStorePlugin = /** @class */ (function () {
     return VueStorePlugin;
 }());
 
-module.exports = VueStorePlugin;
+export default VueStorePlugin;

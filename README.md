@@ -1,4 +1,4 @@
-# simple-vuex
+# vue-store
 *still developing...*
 
 a simpler way to use redux-like state management in vue project
@@ -8,7 +8,7 @@ a simpler way to use redux-like state management in vue project
 
 ### install
 ```bash
-npm install vuestore
+npm install @tingyuan/vue-store
 ```
 
 ### example
@@ -46,11 +46,11 @@ const modules = {
 }
 
 import Vue from 'vue'
-import VueStore from 'vuestore'
+import VueStore from '@tingyuan/vue-store'
 
 Vue.use(VueStore)
 
-const store = VueStore.createVueStore(modules, {
+const store = VueStore.createStore(modules, {
   strict: true,
   plugins: [
     store => {
@@ -73,7 +73,7 @@ export default store
 ```
 
 ### api
-* `store = VueStore.createVueStore(modules, options)`
+* `store = VueStore.createStore(modules, options)`
 * `store.watch(getter, callback)`
 * `store.subscribe(listener)`
 * `store.addModule(modulePath, module)`
