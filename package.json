@@ -1,6 +1,6 @@
 {
   "name": "@tingyuan/vue-store",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "simpler vuex alternative",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -17,7 +17,8 @@
     "types"
   ],
   "scripts": {
-    "build": "rm -rf dist && npx rollup -c ./rollup.config.js"
+    "build": "rm -rf dist && npx rollup -c ./rollup.config.js",
+    "lint": "npx eslint --ext .js,.ts lib/vue-store.ts --fix"
   },
   "repository": {
     "type": "git",
@@ -34,9 +35,9 @@
   "author": "tingyuan",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/lovetingyuan/simple-vuex/issues"
+    "url": "https://github.com/lovetingyuan/vue-store/issues"
   },
-  "homepage": "https://github.com/lovetingyuan/simple-vuex#readme",
+  "homepage": "https://github.com/lovetingyuan/vue-store#readme",
   "dependencies": {
     "@types/node": "^12.6.6",
     "tslib": "^1.10.0",
@@ -44,10 +45,27 @@
     "vuex": "^3.1.1"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^1.13.0",
+    "eslint": "^6.1.0",
+    "eslint-config-standard-with-typescript": "^8.0.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-node": "^9.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.0",
     "rollup": "^1.19.4",
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-terser": "^5.1.1",
     "rollup-plugin-typescript": "^1.0.1",
     "typescript": "^3.5.3"
-  }
+  },
+  "eslintConfig": {
+    "extends": "standard-with-typescript",
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    }
+  },
+  "eslintIgnore": [
+    "dist",
+    "example"
+  ]
 }

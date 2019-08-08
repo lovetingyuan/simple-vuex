@@ -1,5 +1,7 @@
 import _Vue, { ComponentOptions, WatchOptions } from 'vue'
 
+import { VueStoreOptions } from '../types'
+
 interface CommonModule {
   [k: string]: any
 }
@@ -11,8 +13,6 @@ type ListenerData = {
   actionType: string
   payload: any
 }
-
-import { VueStoreOptions } from '../types'
 
 interface StoreProto<Y> {
   addModule: <T>(path: string, _module: T) => T
@@ -27,21 +27,27 @@ interface StoreProto<Y> {
 let Vue!: typeof _Vue
 const prefix = 'vuestore: '
 
-function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOptions<M & StoreProto<M>>) {
+function setFunction (target: { [k: string]: any }, name: string, func: (...a: any) => any): void {
+  target[name] = ({
+    [name]: func
+  })[name]
+}
+
+function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOptions<M & StoreProto<M>>): (M & StoreProto<M>) {
   if (!Vue) {
     throw new Error(prefix + 'Please install VueStorePlugin first.')
   }
   let isCommitting = false
-  let isGetting = false
+  let isGetting = false // eslint-disable-line
   let isReplacing = false
   let subscribeName = ''
   const eventBus = new Vue()
   const base: StoreProto<M> = {
-    addModule(path: string, _module: CommonModule) {
+    addModule<MM extends CommonModule> (path: string, _module: MM): MM {
       const routes = path.split('.')
       const moduleName = routes.pop() as string
       let parentModule: any = store
-      routes.forEach(r => {
+      routes.forEach((r): void => {
         parentModule = parentModule[r]
       })
       Object.defineProperty(parentModule, moduleName, {
@@ -51,12 +57,12 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       })
       return parentModule[moduleName]
     },
-    removeModule(path: string) {
-      'use strict';
+    removeModule (path: string): void {
+      'use strict'
       const routes = path.split('.')
       const moduleName = routes.pop() as string
       let parentModule: any = store
-      routes.forEach(r => {
+      routes.forEach((r): void => {
         parentModule = parentModule[r]
       })
       try {
@@ -67,20 +73,18 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
         throw new Error(prefix + `Only dynamic module can be removed while ${path} is an initial module.`)
       }
     },
-    subscribe(listener) {
+    subscribe (listener): () => void {
       if (!subscribeName) {
         subscribeName = 'vuestore-mutation-action-subscribe-event'
       }
-      const _listener = (data: ListenerData, state: M) => {
-        listener(data, state)
-      }
+      const _listener = (data: ListenerData, state: M): void => { listener(data, state) }
       eventBus.$on(subscribeName, _listener)
-      return () => eventBus.$off(subscribeName, _listener)
+      return (): void => { eventBus.$off(subscribeName, _listener) }
     },
-    replaceState(state, _store = store) {
+    replaceState (state, _store = store): void {
       isReplacing = true
       const vueInstance: InstanceType<typeof _Vue> = _store.__vue__
-      Object.keys(state).forEach(key => {
+      Object.keys(state).forEach((key): void => {
         if (/[A-Z]/.test(key[0])) {
           const replaceState: any = base.replaceState
           if (_store[key]) {
@@ -97,30 +101,30 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       })
       isReplacing = false
     },
-    watch(fn, cb, option) {
+    watch (fn, cb, option): () => void {
       const getter = fn.bind(stateGetters)
       return eventBus.$watch(getter as any, cb, option)
     },
-    getState() {
+    getState (): object {
       if (process.env.NODE_ENV !== 'production') {
         console.warn(prefix + 'Only use getState in development mode.')
       }
       return JSON.parse(JSON.stringify(state))
     },
-    hotUpdate(path, _module) {
+    hotUpdate (path, _module): void {
       const newModule = typeof path === 'string' ? _module : path
       const routesPath = typeof path === 'string' ? path : ''
       const routes = routesPath.split('/')
       let Module: CommonModule = store
-      routes.forEach(r => {
+      routes.forEach((r): void => {
         Module = Module[r]
       })
-      Object.keys(Module.__module__).forEach(k => {
+      Object.keys(Module.__module__).forEach((k): void => {
         if (typeof Module.__module__[k] === 'function') {
           delete Module.__module__[k]
         }
       })
-      Object.keys(newModule).forEach(key => {
+      Object.keys(newModule).forEach((key): void => {
         if (/[A-Z]/.test(key[0])) {
           const hotUpdate: any = base.hotUpdate
           hotUpdate(routesPath + '/' + key, newModule[key])
@@ -135,16 +139,16 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       })
     }
   }
-  function _createStore<M extends CommonModule>(Modules: M, routes: string[] = []) {
+  function _createStore<M extends CommonModule> (Modules: M, routes: string[] = []): M[] {
     const Module: any = routes.length ? {} : Object.create(base)
     const state: CommonModule = {}
     const stateGetters: CommonModule = {}
     const vueOption: ComponentOptions<_Vue> & {
-      __state__: any,
+      __state__: any
       __stateGetters__: any
     } = { __state__: state, __stateGetters__: stateGetters, data: {} }
     const routesPath = routes.join('/')
-    Object.keys(Modules).forEach(key => {
+    Object.keys(Modules).forEach((key): void => {
       if (/[A-Z]/.test(key[0])) {
         if (!Modules[key]) return
         const [_Module, _state, _stateGetters] = _createStore(Modules[key], routes.concat(key))
@@ -161,48 +165,43 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
           delete Modules[key]
           ;(Modules as any)[key] = getter
           vueOption.computed = vueOption.computed || {}
-          vueOption.computed[key] = function () {
+          vueOption.computed[key] = function (): any { // eslint-disable-line
             isGetting = true
             const value = Modules[key].call(stateGetters)
             isGetting = false
             return value
           }
           const descriptor = {
-            get() { return vueIns[key] },
+            get (): any { return vueIns[key] }, // eslint-disable-line
             enumerable: true
           }
           Object.defineProperty(stateGetters, key, descriptor)
           Object.defineProperty(Module, key, descriptor)
         } else if (typeof Modules[key] === 'function') {
-          vueOption.methods = vueOption.methods || {}
-          if (key[0] === '$') {
-            Module[key] = function (payload: any) {
-              if (subscribeName) {
-                eventBus.$emit(subscribeName, {
-                  actionType: routesPath ? `${routesPath}/${key}` : key,
-                  payload
-                }, state)
-              }
-              return Modules[key].call(Module, payload)
+          setFunction(Module, key, key[0] === '$' ? function (payload: any): any { // eslint-disable-line
+            if (subscribeName) {
+              eventBus.$emit(subscribeName, {
+                actionType: routesPath ? `${routesPath}/${key}` : key,
+                payload
+              }, state)
             }
-          } else {
-            Module[key] = function (payload: any) {
-              isCommitting = true
-              if (subscribeName) {
-                eventBus.$emit(subscribeName, {
-                  type: routesPath ? `${routesPath}/${key}` : key,
-                  payload
-                }, state)
-              }
-              Modules[key].call(state, payload)
-              isCommitting = false
+            return Modules[key].call(Module, payload)
+          } : function (payload: any): void {
+            isCommitting = true
+            if (subscribeName) {
+              eventBus.$emit(subscribeName, {
+                type: routesPath ? `${routesPath}/${key}` : key,
+                payload
+              }, state)
             }
-          }
+            Modules[key].call(state, payload)
+            isCommitting = false
+          })
         } else {
-          (vueOption.data as any)[key] = Modules[key]
+          (vueOption.data as { [k: string]: any })[key] = Modules[key]
           const descriptor = {
-            get() { return vueIns[key] },
-            set(val: any) {
+            get (): any { return vueIns[key] }, // eslint-disable-line
+            set (val: any): void {
               vueIns[key] = val
             },
             enumerable: true
@@ -214,52 +213,50 @@ function createVueStore<M extends CommonModule>(modules: M, option?: VueStoreOpt
       }
     })
     const vueIns: any = new Vue(vueOption)
-    Object.defineProperty(Module, '__vue__', {
-      value: vueIns
-    })
-    Object.defineProperty(Module, '__module__', {
-      value: Modules,
+    Object.defineProperties(Module, {
+      __vue__: { value: vueIns },
+      __module__: { value: Modules }
     })
     return [Module, state, stateGetters]
   }
   const [_store, state, stateGetters] = _createStore(modules)
-  const store = _store as (M & StoreProto<M>);
+  const store = _store as (M & StoreProto<M>)
   if (option && option.strict) {
     if (process.env.NODE_ENV !== 'production') {
       console.warn(prefix + 'Only use strict option in development mode!')
     }
-    eventBus.$watch(() => state, () => {
+    eventBus.$watch((): object => state, (): void => {
       if (!isCommitting && !isReplacing) {
-        setTimeout(() => { // prevent vue to show error
+        setTimeout((): never => { // prevent vue to show error
           throw new Error(prefix + 'Only mutation could change state!')
         })
       }
     }, { deep: true, sync: true } as any)
   }
   if (option && Array.isArray(option.plugins)) {
-    option.plugins.forEach(plugin => {
+    option.plugins.forEach((plugin: any): void => {
       typeof plugin === 'function' && plugin(store)
     })
   }
   return store
 }
 
-export default class VueStorePlugin {
-  static install(vue: typeof _Vue) {
+export default {
+  install (vue: typeof _Vue): void {
     if (Vue && Vue === vue) {
       console.warn(prefix + 'Do not install the plugin again.')
     }
     Vue = vue
     Vue.mixin({
-      beforeCreate() {
+      beforeCreate (): void {
         const options: any = this.$options
         if (options.store) {
-        (this as any).$store = options.store
+          (this as any).$store = options.store
         } else if (options.parent && options.parent.$store) {
           (this as any).$store = options.parent.$store
         }
       }
     })
-  }
-  static createStore = createVueStore
+  },
+  createStore: createVueStore
 }

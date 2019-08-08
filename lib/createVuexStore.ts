@@ -56,7 +56,7 @@ export default function createVuexStore<M extends MyModule> (modules: M, options
           return getter.call(pData)
         }
         const descriptor = {
-          get() {
+          get () {
             return store.getters[newRoutes]
           }
         }
@@ -72,7 +72,7 @@ export default function createVuexStore<M extends MyModule> (modules: M, options
         }
       } else if (typeof mModule[name] === 'function') { // mutation
         vuexModule.mutations = vuexModule.mutations || {}
-        vuexModule.mutations[name] = function(state, payload) {
+        vuexModule.mutations[name] = function (state, payload) {
           mModule[name].call(state, payload)
         }
         pModule[name] = function (payload: any) {
@@ -84,10 +84,10 @@ export default function createVuexStore<M extends MyModule> (modules: M, options
         if (routes.length) { // mean nested module
           stateGetter = new Function('s', 'n', `return s.${routes.join('.')}[n]`)
         } else {
-          stateGetter = function(state, name) { return state[name] }
+          stateGetter = function (state, name) { return state[name] }
         }
         const descriptor = {
-          get() {
+          get () {
             return stateGetter(store.state, name)
           }
         }
@@ -98,18 +98,18 @@ export default function createVuexStore<M extends MyModule> (modules: M, options
     return vuexModule
   }
   const base: Base<M> = {
-    get $store() { return store },
-    watch(fn, callback, options) {
+    get $store () { return store },
+    watch (fn, callback, options) {
       return store.watch(fn.bind(patchedData), callback, options)
     },
-    subscribe(sub) {
+    subscribe (sub) {
       return store.subscribe(sub)
     },
-    subscribeAction(sub) {
+    subscribeAction (sub) {
       return store.subscribeAction(sub)
     },
-    addModule(router, _module) {
-      let routes = router.split('.')
+    addModule (router, _module) {
+      const routes = router.split('.')
       const key = routes.pop() as string
       let _patchedM = patchedModule
       let _patchedD = patchedData
@@ -122,8 +122,8 @@ export default function createVuexStore<M extends MyModule> (modules: M, options
       const vuexM = normalizeModule(_module, _patchedM, _patchedD, routes.concat(key))
       store.registerModule(routes.concat(key), vuexM)
     },
-    removeModule(router) {
-      let routes = router.split('.')
+    removeModule (router) {
+      const routes = router.split('.')
       store.unregisterModule([...routes])
       const key = routes.pop() as string
       let _patchedM = patchedModule

@@ -2,6 +2,12 @@
 
 var Vue;
 var prefix = 'vuestore: ';
+function setFunction(target, name, func) {
+    var _a;
+    target[name] = (_a = {},
+        _a[name] = func,
+        _a)[name];
+}
 function createVueStore(modules, option) {
     if (!Vue) {
         throw new Error(prefix + 'Please install VueStorePlugin first.');
@@ -45,11 +51,9 @@ function createVueStore(modules, option) {
             if (!subscribeName) {
                 subscribeName = 'vuestore-mutation-action-subscribe-event';
             }
-            var _listener = function (data, state) {
-                listener(data, state);
-            };
+            var _listener = function (data, state) { listener(data, state); };
             eventBus.$on(subscribeName, _listener);
-            return function () { return eventBus.$off(subscribeName, _listener); };
+            return function () { eventBus.$off(subscribeName, _listener); };
         },
         replaceState: function (state, _store) {
             if (_store === void 0) { _store = store; }
@@ -152,31 +156,25 @@ function createVueStore(modules, option) {
                     Object.defineProperty(Module, key, descriptor);
                 }
                 else if (typeof Modules[key] === 'function') {
-                    vueOption.methods = vueOption.methods || {};
-                    if (key[0] === '$') {
-                        Module[key] = function (payload) {
-                            if (subscribeName) {
-                                eventBus.$emit(subscribeName, {
-                                    actionType: routesPath ? routesPath + "/" + key : key,
-                                    payload: payload
-                                }, state);
-                            }
-                            return Modules[key].call(Module, payload);
-                        };
-                    }
-                    else {
-                        Module[key] = function (payload) {
-                            isCommitting = true;
-                            if (subscribeName) {
-                                eventBus.$emit(subscribeName, {
-                                    type: routesPath ? routesPath + "/" + key : key,
-                                    payload: payload
-                                }, state);
-                            }
-                            Modules[key].call(state, payload);
-                            isCommitting = false;
-                        };
-                    }
+                    setFunction(Module, key, key[0] === '$' ? function (payload) {
+                        if (subscribeName) {
+                            eventBus.$emit(subscribeName, {
+                                actionType: routesPath ? routesPath + "/" + key : key,
+                                payload: payload
+                            }, state);
+                        }
+                        return Modules[key].call(Module, payload);
+                    } : function (payload) {
+                        isCommitting = true;
+                        if (subscribeName) {
+                            eventBus.$emit(subscribeName, {
+                                type: routesPath ? routesPath + "/" + key : key,
+                                payload: payload
+                            }, state);
+                        }
+                        Modules[key].call(state, payload);
+                        isCommitting = false;
+                    });
                 }
                 else {
                     vueOption.data[key] = Modules[key];
@@ -194,11 +192,9 @@ function createVueStore(modules, option) {
             }
         });
         var vueIns = new Vue(vueOption);
-        Object.defineProperty(Module, '__vue__', {
-            value: vueIns
-        });
-        Object.defineProperty(Module, '__module__', {
-            value: Modules,
+        Object.defineProperties(Module, {
+            __vue__: { value: vueIns },
+            __module__: { value: Modules }
         });
         return [Module, state, stateGetters];
     }
@@ -223,10 +219,8 @@ function createVueStore(modules, option) {
     }
     return store;
 }
-var VueStorePlugin = /** @class */ (function () {
-    function VueStorePlugin() {
-    }
-    VueStorePlugin.install = function (vue) {
+var VueStorePlugin = {
+    install: function (vue) {
         if (Vue && Vue === vue) {
             console.warn(prefix + 'Do not install the plugin again.');
         }
@@ -242,9 +236,8 @@ var VueStorePlugin = /** @class */ (function () {
                 }
             }
         });
-    };
-    VueStorePlugin.createStore = createVueStore;
-    return VueStorePlugin;
-}());
+    },
+    createStore: createVueStore
+};
 
 module.exports = VueStorePlugin;

@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueStore from '../../lib/vue-store'
-import devtoolPlugin from '../../lib/devtool'
+// import devtoolPlugin from '../../lib/devtool'
 
 Vue.use(VueStore)
 
@@ -13,7 +13,7 @@ if (module.hot) {
 
 import { TodoModuleType } from '@/modules/todoListModule'
 
-const store = VueStore.createVueStore({
+const store = VueStore.createStore({
   user: {
     name: 'tingyuan',
     age: 12
@@ -23,7 +23,7 @@ const store = VueStore.createVueStore({
 }, {
   strict: process.env.NODE_ENV === 'development',
   plugins: [
-    devtoolPlugin
+    // devtoolPlugin
   ]
 })
 
