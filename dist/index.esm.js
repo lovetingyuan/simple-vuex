@@ -81,6 +81,9 @@ function createVueStore(modules, option) {
             return eventBus.$watch(getter, cb, option);
         },
         getState: function () {
+            if (process.env.NODE_ENV === 'production') {
+                console.warn(prefix + 'Only use getState in development mode.');
+            }
             return JSON.parse(JSON.stringify(state));
         },
         hotUpdate: function (path, _module) {
@@ -122,7 +125,7 @@ function createVueStore(modules, option) {
         var Module = routes.length ? {} : Object.create(base);
         var state = {};
         var stateGetters = {};
-        var vueOption = { __state__: state, __stateGetters__: stateGetters, data: {} };
+        var vueOption = {};
         var routesPath = routes.join('/');
         Object.keys(Modules).forEach(function (key) {
             if (/[A-Z]/.test(key[0])) {
@@ -140,13 +143,10 @@ function createVueStore(modules, option) {
             else {
                 var getter = Object.getOwnPropertyDescriptor(Modules, key).get;
                 if (typeof getter === 'function') {
-                    // delete Modules[key]
-                    // ;(Modules as any)[key] = getter
                     ModulesCopy[key] = getter;
                     vueOption.computed = vueOption.computed || {};
                     vueOption.computed[key] = function () {
-                        var value = ModulesCopy[key].call(stateGetters);
-                        return value;
+                        return ModulesCopy[key].call(stateGetters);
                     };
                     var descriptor = {
                         get: function () { return vueIns[key]; },
@@ -178,7 +178,8 @@ function createVueStore(modules, option) {
                     });
                 }
                 else {
-                    vueOption.data[key] = Modules[key];
+                    var data = vueOption.data = vueOption.data || {};
+                    data[key] = Modules[key];
                     var descriptor = {
                         get: function () { return vueIns[key]; },
                         set: function (val) {
@@ -202,6 +203,9 @@ function createVueStore(modules, option) {
     var _a = _createStore(modules), _store = _a[0], state = _a[1], stateGetters = _a[2];
     var store = _store;
     if (option && option.strict) {
+        if (process.env.NODE_ENV === 'production') {
+            console.warn(prefix + 'Only use strict option in development mode!');
+        }
         eventBus.$watch(function () { return state; }, function () {
             if (!isCommitting && !isReplacing) {
                 setTimeout(function () {

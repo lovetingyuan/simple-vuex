@@ -38,7 +38,6 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     throw new Error(prefix + 'Please install VueStorePlugin first.')
   }
   let isCommitting = false
-  let isGetting = false // eslint-disable-line
   let isReplacing = false
   let subscribeName = ''
   const eventBus = new Vue()
@@ -106,7 +105,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       return eventBus.$watch(getter as any, cb, option)
     },
     getState (): object {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV === 'production') {
         console.warn(prefix + 'Only use getState in development mode.')
       }
       return JSON.parse(JSON.stringify(state))
@@ -147,10 +146,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     const Module: any = routes.length ? {} : Object.create(base)
     const state: CommonModule = {}
     const stateGetters: CommonModule = {}
-    const vueOption: ComponentOptions<_Vue> & {
-      __state__: any
-      __stateGetters__: any
-    } = { __state__: state, __stateGetters__: stateGetters, data: {} }
+    const vueOption: ComponentOptions<_Vue> = {}
     const routesPath = routes.join('/')
     Object.keys(Modules).forEach((key): void => {
       if (/[A-Z]/.test(key[0])) {
@@ -166,15 +162,10 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       } else {
         const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
         if (typeof getter === 'function') {
-          // delete Modules[key]
-          // ;(Modules as any)[key] = getter
           ModulesCopy[key] = getter
           vueOption.computed = vueOption.computed || {}
           vueOption.computed[key] = function (): any { // eslint-disable-line
-            isGetting = true
-            const value = ModulesCopy[key].call(stateGetters)
-            isGetting = false
-            return value
+            return ModulesCopy[key].call(stateGetters)
           }
           const descriptor = {
             get (): any { return vueIns[key] }, // eslint-disable-line
@@ -204,7 +195,8 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
             isCommitting = false
           })
         } else {
-          (vueOption.data as { [k: string]: any })[key] = Modules[key]
+          const data: any = vueOption.data = vueOption.data || {}
+          data[key] = Modules[key]
           const descriptor = {
             get (): any { return vueIns[key] }, // eslint-disable-line
             set (val: any): void {
@@ -228,7 +220,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
   const [_store, state, stateGetters] = _createStore(modules)
   const store = _store as (M & StoreProto<M>)
   if (option && option.strict) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'production') {
       console.warn(prefix + 'Only use strict option in development mode!')
     }
     eventBus.$watch((): object => state, (): void => {

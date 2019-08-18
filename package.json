@@ -1,11 +1,11 @@
 {
   "name": "@tingyuan/vue-store",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "simpler vuex alternative",
-  "main": "dist/index.js",
+  "main": "dist/index.common.js",
   "module": "dist/index.esm.js",
-  "unpkg": "dist/index.min.js",
-  "jsdelivr": "dist/index.min.js",
+  "unpkg": "dist/index.umd.min.js",
+  "jsdelivr": "dist/index.umd.min.js",
   "types": "./types/index.ts",
   "sideEffects": false,
   "directories": {
