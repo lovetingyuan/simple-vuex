@@ -140,6 +140,10 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     }
   }
   function _createStore<M extends CommonModule> (Modules: M, routes: string[] = []): M[] {
+    if (typeof Modules === 'function') {
+      Modules = Modules()
+    }
+    const ModulesCopy: any = {} // for hotUpdate, store functions
     const Module: any = routes.length ? {} : Object.create(base)
     const state: CommonModule = {}
     const stateGetters: CommonModule = {}
@@ -162,12 +166,13 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       } else {
         const getter = (Object.getOwnPropertyDescriptor(Modules, key) as PropertyDescriptor).get
         if (typeof getter === 'function') {
-          delete Modules[key]
-          ;(Modules as any)[key] = getter
+          // delete Modules[key]
+          // ;(Modules as any)[key] = getter
+          ModulesCopy[key] = getter
           vueOption.computed = vueOption.computed || {}
           vueOption.computed[key] = function (): any { // eslint-disable-line
             isGetting = true
-            const value = Modules[key].call(stateGetters)
+            const value = ModulesCopy[key].call(stateGetters)
             isGetting = false
             return value
           }
@@ -178,6 +183,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
           Object.defineProperty(stateGetters, key, descriptor)
           Object.defineProperty(Module, key, descriptor)
         } else if (typeof Modules[key] === 'function') {
+          ModulesCopy[key] = Modules[key]
           setFunction(Module, key, key[0] === '$' ? function (payload: any): any { // eslint-disable-line
             if (subscribeName) {
               eventBus.$emit(subscribeName, {
@@ -185,7 +191,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
                 payload
               }, state)
             }
-            return Modules[key].call(Module, payload)
+            return ModulesCopy[key].call(Module, payload)
           } : function (payload: any): void {
             isCommitting = true
             if (subscribeName) {
@@ -194,7 +200,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
                 payload
               }, state)
             }
-            Modules[key].call(state, payload)
+            ModulesCopy[key].call(state, payload)
             isCommitting = false
           })
         } else {
@@ -215,7 +221,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     const vueIns: any = new Vue(vueOption)
     Object.defineProperties(Module, {
       __vue__: { value: vueIns },
-      __module__: { value: Modules }
+      __module__: { value: ModulesCopy }
     })
     return [Module, state, stateGetters]
   }

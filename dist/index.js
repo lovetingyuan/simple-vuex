@@ -120,6 +120,10 @@ function createVueStore(modules, option) {
     };
     function _createStore(Modules, routes) {
         if (routes === void 0) { routes = []; }
+        if (typeof Modules === 'function') {
+            Modules = Modules();
+        }
+        var ModulesCopy = {}; // for hotUpdate, store functions
         var Module = routes.length ? {} : Object.create(base);
         var state = {};
         var stateGetters = {};
@@ -141,11 +145,12 @@ function createVueStore(modules, option) {
             else {
                 var getter = Object.getOwnPropertyDescriptor(Modules, key).get;
                 if (typeof getter === 'function') {
-                    delete Modules[key];
-                    Modules[key] = getter;
+                    // delete Modules[key]
+                    // ;(Modules as any)[key] = getter
+                    ModulesCopy[key] = getter;
                     vueOption.computed = vueOption.computed || {};
                     vueOption.computed[key] = function () {
-                        var value = Modules[key].call(stateGetters);
+                        var value = ModulesCopy[key].call(stateGetters);
                         return value;
                     };
                     var descriptor = {
@@ -156,6 +161,7 @@ function createVueStore(modules, option) {
                     Object.defineProperty(Module, key, descriptor);
                 }
                 else if (typeof Modules[key] === 'function') {
+                    ModulesCopy[key] = Modules[key];
                     setFunction(Module, key, key[0] === '$' ? function (payload) {
                         if (subscribeName) {
                             eventBus.$emit(subscribeName, {
@@ -163,7 +169,7 @@ function createVueStore(modules, option) {
                                 payload: payload
                             }, state);
                         }
-                        return Modules[key].call(Module, payload);
+                        return ModulesCopy[key].call(Module, payload);
                     } : function (payload) {
                         isCommitting = true;
                         if (subscribeName) {
@@ -172,7 +178,7 @@ function createVueStore(modules, option) {
                                 payload: payload
                             }, state);
                         }
-                        Modules[key].call(state, payload);
+                        ModulesCopy[key].call(state, payload);
                         isCommitting = false;
                     });
                 }
@@ -194,7 +200,7 @@ function createVueStore(modules, option) {
         var vueIns = new Vue(vueOption);
         Object.defineProperties(Module, {
             __vue__: { value: vueIns },
-            __module__: { value: Modules }
+            __module__: { value: ModulesCopy }
         });
         return [Module, state, stateGetters];
     }
