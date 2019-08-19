@@ -3,8 +3,9 @@
 
 a simpler way to use redux-like state management in vue project
 
-* simpler way to write your mutations, getters, actions, no ACTION_TYPE, commit, dispatch
-* better and natural support for typescript
+* Simpler way to write your mutations, getters, actions, no ACTION_TYPE, commit, dispatch
+* Better and natural support for typescript
+* Only 1.4KB after gzip but with adequate support
 
 ### install
 ```bash
