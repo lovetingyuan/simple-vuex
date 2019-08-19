@@ -28,11 +28,13 @@ function createVueStore(modules, option) {
             routes.forEach(function (r) {
                 parentModule = parentModule[r];
             });
+            var _state = {};
             Object.defineProperty(parentModule, moduleName, {
-                value: _createStore(_module, routes.concat(moduleName))[0],
+                value: _createStore(_module, routes.concat(moduleName), _state, {}),
                 enumerable: true,
                 configurable: true // allow to delete dynamic module
             });
+            parentModule.__state__[moduleName] = _state;
             return parentModule[moduleName];
         },
         removeModule: function (path) {
@@ -44,6 +46,7 @@ function createVueStore(modules, option) {
             });
             try {
                 var vueIns = parentModule[moduleName].__vue__;
+                delete parentModule.__state__[moduleName];
                 delete parentModule[moduleName];
                 vueIns.$destroy();
             }
@@ -87,7 +90,7 @@ function createVueStore(modules, option) {
             return eventBus.$watch(getter, cb, option);
         },
         getState: function () {
-            return JSON.parse(JSON.stringify(state));
+            return JSON.parse(JSON.stringify(store.__state__));
         },
         hotUpdate: function (path, _module) {
             var newModule = typeof path === 'string' ? _module : path;
@@ -119,22 +122,23 @@ function createVueStore(modules, option) {
             });
         }
     };
-    function _createStore(Modules, routes) {
-        if (routes === void 0) { routes = []; }
+    function _createStore(Modules, routes, state, stateGetters) {
         if (typeof Modules === 'function') {
             Modules = Modules();
         }
         var ModulesCopy = {}; // for hotUpdate, store functions
         var Module = routes.length ? {} : Object.create(base);
-        var state = {};
-        var stateGetters = {};
+        // const state: CommonModule = {}
+        // const stateGetters: CommonModule = {}
         var vueOption = {};
         var routesPath = routes.join('/');
         Object.keys(Modules).forEach(function (key) {
             if (/[A-Z]/.test(key[0])) {
                 if (!Modules[key])
                     return;
-                var _a = _createStore(Modules[key], routes.concat(key)), _Module = _a[0], _state = _a[1], _stateGetters = _a[2];
+                var _state = {};
+                var _stateGetters = {};
+                var _Module = _createStore(Modules[key], routes.concat(key), _state, _stateGetters);
                 Object.defineProperty(Module, key, {
                     value: _Module,
                     enumerable: true,
@@ -199,11 +203,14 @@ function createVueStore(modules, option) {
         var vueIns = new Vue(vueOption);
         Object.defineProperties(Module, {
             __vue__: { value: vueIns },
-            __module__: { value: ModulesCopy }
+            __module__: { value: ModulesCopy },
+            __state__: { value: state }
         });
-        return [Module, state, stateGetters];
+        return Module;
     }
-    var _a = _createStore(modules), _store = _a[0], state = _a[1], stateGetters = _a[2];
+    var state = {};
+    var stateGetters = {};
+    var _store = _createStore(modules, [], state, stateGetters);
     var store = _store;
     if (option && option.strict) {
         eventBus.$watch(function () { return state; }, function () {

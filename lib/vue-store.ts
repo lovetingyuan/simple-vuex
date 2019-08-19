@@ -49,11 +49,13 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       routes.forEach((r): void => {
         parentModule = parentModule[r]
       })
+      const _state = {}
       Object.defineProperty(parentModule, moduleName, {
-        value: _createStore(_module, routes.concat(moduleName))[0],
+        value: _createStore(_module, routes.concat(moduleName), _state, {}),
         enumerable: true,
         configurable: true // allow to delete dynamic module
       })
+      parentModule.__state__[moduleName] = _state
       return parentModule[moduleName]
     },
     removeModule (path: string): void {
@@ -66,6 +68,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       })
       try {
         const vueIns = parentModule[moduleName].__vue__
+        delete parentModule.__state__[moduleName]
         delete parentModule[moduleName]
         vueIns.$destroy()
       } catch {
@@ -101,14 +104,14 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       isReplacing = false
     },
     watch (fn, cb, option): () => void {
-      const getter = fn.bind(stateGetters)
+      const getter = fn.bind(stateGetters as M)
       return eventBus.$watch(getter as any, cb, option)
     },
     getState (): object {
       if (process.env.NODE_ENV === 'production') {
         console.warn(prefix + 'Only use getState in development mode.')
       }
-      return JSON.parse(JSON.stringify(state))
+      return JSON.parse(JSON.stringify(store.__state__))
     },
     hotUpdate (path, _module): void {
       const newModule = typeof path === 'string' ? _module : path
@@ -138,20 +141,22 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       })
     }
   }
-  function _createStore<M extends CommonModule> (Modules: M, routes: string[] = []): M[] {
+  function _createStore<M extends CommonModule> (Modules: M, routes: string[], state: CommonModule, stateGetters: CommonModule): M {
     if (typeof Modules === 'function') {
       Modules = Modules()
     }
     const ModulesCopy: any = {} // for hotUpdate, store functions
     const Module: any = routes.length ? {} : Object.create(base)
-    const state: CommonModule = {}
-    const stateGetters: CommonModule = {}
+    // const state: CommonModule = {}
+    // const stateGetters: CommonModule = {}
     const vueOption: ComponentOptions<_Vue> = {}
     const routesPath = routes.join('/')
     Object.keys(Modules).forEach((key): void => {
       if (/[A-Z]/.test(key[0])) {
         if (!Modules[key]) return
-        const [_Module, _state, _stateGetters] = _createStore(Modules[key], routes.concat(key))
+        const _state: CommonModule = {}
+        const _stateGetters: CommonModule = {}
+        const _Module = _createStore(Modules[key], routes.concat(key), _state, _stateGetters)
         Object.defineProperty(Module, key, {
           value: _Module,
           enumerable: true,
@@ -213,11 +218,14 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     const vueIns: any = new Vue(vueOption)
     Object.defineProperties(Module, {
       __vue__: { value: vueIns },
-      __module__: { value: ModulesCopy }
+      __module__: { value: ModulesCopy },
+      __state__: { value: state }
     })
-    return [Module, state, stateGetters]
+    return Module
   }
-  const [_store, state, stateGetters] = _createStore(modules)
+  const state = {}
+  const stateGetters = {}
+  const _store = _createStore(modules, [], state, stateGetters)
   const store = _store as (M & StoreProto<M>)
   if (option && option.strict) {
     if (process.env.NODE_ENV === 'production') {

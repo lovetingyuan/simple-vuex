@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueStore from '../../lib/vue-store'
+import VueStore from 'vue-store'
 // import devtoolPlugin from '../../lib/devtool'
 
 Vue.use(VueStore)
