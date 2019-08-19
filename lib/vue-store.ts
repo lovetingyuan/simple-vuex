@@ -25,7 +25,7 @@ interface StoreProto<Y> {
 }
 
 let Vue!: typeof _Vue
-const prefix = 'vuestore: '
+const prefix = 'vue-store: '
 
 function setFunction (target: { [k: string]: any }, name: string, func: (...a: any) => any): void {
   target[name] = ({
@@ -147,8 +147,6 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     }
     const ModulesCopy: any = {} // for hotUpdate, store functions
     const Module: any = routes.length ? {} : Object.create(base)
-    // const state: CommonModule = {}
-    // const stateGetters: CommonModule = {}
     const vueOption: ComponentOptions<_Vue> = {}
     const routesPath = routes.join('/')
     Object.keys(Modules).forEach((key): void => {
@@ -233,7 +231,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     }
     eventBus.$watch((): object => state, (): void => {
       if (!isCommitting && !isReplacing) {
-        setTimeout((): never => { // prevent vue to show error
+        eventBus.$nextTick((): never => { // prevent vue to show error
           throw new Error(prefix + 'Only mutation could change state!')
         })
       }
