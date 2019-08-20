@@ -1,222 +1,224 @@
 var Vue;
-var prefix = 'vuestore: ';
 function setFunction(target, name, func) {
-    var _a;
-    target[name] = (_a = {},
-        _a[name] = func,
-        _a)[name];
+    if (func.name !== name) {
+        Object.defineProperty(func, 'name', { value: name });
+    }
+    target[name] = func;
+}
+function onError(msg) {
+    throw new Error('vue-store error: ' + msg);
+}
+function onWarn(msg) {
+    console.warn('vue-store warn: ' + msg);
 }
 function createVueStore(modules, option) {
     if (!Vue) {
-        throw new Error(prefix + 'Please install VueStorePlugin first.');
+        onError('Please install VueStorePlugin first.');
     }
     var isCommitting = false;
     var isReplacing = false;
     var subscribeName = '';
     var eventBus = new Vue();
     var base = {
-        addModule: function (path, _module) {
+        addModule: function (path, _module, options) {
             var routes = path.split('.');
+            options = options || {
+                preserveState: true
+            };
             var moduleName = routes.pop();
-            var parentModule = store;
-            routes.forEach(function (r) {
-                parentModule = parentModule[r];
-            });
+            var vueStore = store;
+            routes.forEach(function (r) { vueStore = vueStore[r]; });
             var _state = {};
-            Object.defineProperty(parentModule, moduleName, {
-                value: _createStore(_module, routes.concat(moduleName), _state, {}),
-                enumerable: true,
-                configurable: true // allow to delete dynamic module
-            });
-            parentModule.__state__[moduleName] = _state;
-            return parentModule[moduleName];
+            if (vueStore[moduleName] && (options.preserveState || !('preserveState' in options))) {
+                Object.assign(_state, vueStore[moduleName].__state__);
+            }
+            if (vueStore[moduleName] && vueStore[moduleName].__vue__ && !options.replace) {
+                onError(path + 'has been added.');
+            }
+            vueStore[moduleName] = _createStore(_module, routes.concat(moduleName), _state);
+            vueStore.__state__[moduleName] = vueStore[moduleName].__state__;
+            return vueStore[moduleName];
         },
         removeModule: function (path) {
             var routes = path.split('.');
             var moduleName = routes.pop();
-            var parentModule = store;
-            routes.forEach(function (r) {
-                parentModule = parentModule[r];
-            });
+            var vueStore = store;
+            routes.forEach(function (r) { vueStore = vueStore[r]; });
             try {
-                var vueIns = parentModule[moduleName].__vue__;
-                delete parentModule.__state__[moduleName];
-                delete parentModule[moduleName];
+                var vueIns = vueStore[moduleName].__vue__;
+                delete vueStore.__state__[moduleName];
+                delete vueStore[moduleName];
                 vueIns.$destroy();
             }
             catch (_a) {
-                throw new Error(prefix + ("Only dynamic module can be removed while " + path + " is an initial module."));
+                onError(path + " can not be removed as it is not dynamic module.");
             }
         },
         subscribe: function (listener) {
-            if (!subscribeName) {
-                subscribeName = 'vuestore-mutation-action-subscribe-event';
-            }
+            subscribeName = subscribeName || 'vuestore-mutation-action-subscribe-event';
             var _listener = function (data, state) { listener(data, state); };
             eventBus.$on(subscribeName, _listener);
             return function () { eventBus.$off(subscribeName, _listener); };
         },
-        replaceState: function (state, _store) {
-            if (_store === void 0) { _store = store; }
-            isReplacing = true;
-            var vueInstance = _store.__vue__;
+        replaceState: function (state, vueStore) {
+            var _this = this;
+            vueStore = vueStore || store;
             Object.keys(state).forEach(function (key) {
                 if (/[A-Z]/.test(key[0])) {
-                    var replaceState = base.replaceState;
-                    if (_store[key]) {
-                        replaceState(state[key], _store[key]);
+                    if (vueStore[key]) {
+                        _this.replaceState(state[key], vueStore[key]);
                     }
                     else {
-                        throw new Error(prefix + ("Namespace sub module " + key + " does not exist"));
+                        vueStore[key] = {
+                            __state__: state[key]
+                        };
+                        vueStore.__state__[key] = state[key];
                     }
                 }
-                else { // avoid to trigger getter
-                    var getter = Object.getOwnPropertyDescriptor(state, key).get;
-                    if (typeof getter !== 'function' && typeof state[key] !== 'function') {
-                        vueInstance.$set(vueInstance, key, state[key]);
-                    }
+                else {
+                    isReplacing = true;
+                    vueStore.__vue__[key] = state[key];
+                    isReplacing = false;
                 }
             });
-            isReplacing = false;
         },
         watch: function (fn, cb, option) {
-            var getter = fn.bind(stateGetters);
-            return eventBus.$watch(getter, cb, option);
+            return eventBus.$watch(fn, cb, option);
         },
         getState: function () {
             if (process.env.NODE_ENV === 'production') {
-                console.warn(prefix + 'Only use getState in development mode.');
+                onWarn('Only call getState in development mode.');
             }
             return JSON.parse(JSON.stringify(store.__state__));
         },
         hotUpdate: function (path, _module) {
+            var _this = this;
             var newModule = typeof path === 'string' ? _module : path;
             var routesPath = typeof path === 'string' ? path : '';
-            var routes = routesPath.split('/');
-            var Module = store;
-            routes.forEach(function (r) {
-                Module = Module[r];
+            var routes = routesPath.split('.');
+            var vueStore = store;
+            routes.forEach(function (r) { vueStore = vueStore[r]; });
+            Object.keys(vueStore.__getters__).forEach(function (name) {
+                delete vueStore.__getters__[name];
             });
-            Object.keys(Module.__module__).forEach(function (k) {
-                if (typeof Module.__module__[k] === 'function') {
-                    delete Module.__module__[k];
-                }
+            Object.keys(vueStore.__methods__).forEach(function (name) {
+                delete vueStore.__methods__[name];
             });
             Object.keys(newModule).forEach(function (key) {
                 if (/[A-Z]/.test(key[0])) {
-                    var hotUpdate = base.hotUpdate;
-                    hotUpdate(routesPath + '/' + key, newModule[key]);
+                    _this.hotUpdate(routesPath + '.' + key, newModule[key]);
                 }
                 else {
                     var getter = Object.getOwnPropertyDescriptor(newModule, key).get;
                     if (typeof getter === 'function') {
-                        Module.__module__[key] = getter;
+                        vueStore.__getters__[key] = getter;
                     }
                     else if (typeof newModule[key] === 'function') {
-                        Module.__module__[key] = newModule[key];
+                        vueStore.__methods__[key] = newModule[key];
                     }
                 }
             });
         }
     };
-    function _createStore(Modules, routes, state, stateGetters) {
-        if (typeof Modules === 'function') {
-            Modules = Modules();
+    function _createStore(UserModule, routes, preservedState) {
+        if (routes === void 0) { routes = []; }
+        if (typeof UserModule === 'function') {
+            UserModule = UserModule();
         }
-        var ModulesCopy = {}; // for hotUpdate, store functions
-        var Module = routes.length ? {} : Object.create(base);
-        // const state: CommonModule = {}
-        // const stateGetters: CommonModule = {}
+        var Methods = {}; // for hotUpdate, store functions
+        var Getters = {};
+        var state = {};
+        var stateGetters = {};
+        var vueStore = routes.length ? {} : Object.create(base);
         var vueOption = {};
         var routesPath = routes.join('/');
-        Object.keys(Modules).forEach(function (key) {
+        Object.keys(UserModule).forEach(function (key) {
             if (/[A-Z]/.test(key[0])) {
-                if (!Modules[key])
+                if (!UserModule[key])
                     return;
-                var _state = {};
-                var _stateGetters = {};
-                var _Module = _createStore(Modules[key], routes.concat(key), _state, _stateGetters);
-                Object.defineProperty(Module, key, {
-                    value: _Module,
+                var _store = _createStore(UserModule[key], routes.concat(key));
+                Object.defineProperty(vueStore, key, {
+                    value: _store,
                     enumerable: true,
-                    configurable: false
+                    configurable: false // prevent to be deleted
                 });
-                state[key] = _state;
-                stateGetters[key] = _stateGetters;
+                state[key] = _store.__state__;
+                stateGetters[key] = _store.__stateGetters__;
             }
             else {
-                var getter = Object.getOwnPropertyDescriptor(Modules, key).get;
+                var getter = Object.getOwnPropertyDescriptor(UserModule, key).get;
                 if (typeof getter === 'function') {
-                    ModulesCopy[key] = getter;
+                    Getters[key] = getter;
                     vueOption.computed = vueOption.computed || {};
-                    vueOption.computed[key] = function () {
-                        return ModulesCopy[key].call(stateGetters);
-                    };
+                    // eslint-disable-next-line
+                    setFunction(vueOption.computed, key, function () {
+                        return Getters[key].call(stateGetters);
+                    });
                     var descriptor = {
-                        get: function () { return vueIns[key]; },
+                        get: function () { return vueStore.__vue__[key]; },
                         enumerable: true
                     };
                     Object.defineProperty(stateGetters, key, descriptor);
-                    Object.defineProperty(Module, key, descriptor);
+                    Object.defineProperty(vueStore, key, descriptor);
                 }
-                else if (typeof Modules[key] === 'function') {
-                    ModulesCopy[key] = Modules[key];
-                    setFunction(Module, key, key[0] === '$' ? function (payload) {
+                else if (typeof UserModule[key] === 'function') {
+                    Methods[key] = UserModule[key];
+                    setFunction(vueStore, key, key[0] === '$' ? function (payload) {
                         if (subscribeName) {
                             eventBus.$emit(subscribeName, {
                                 actionType: routesPath ? routesPath + "/" + key : key,
                                 payload: payload
                             }, state);
                         }
-                        return ModulesCopy[key].call(Module, payload);
+                        return Methods[key].call(vueStore, payload);
                     } : function (payload) {
-                        isCommitting = true;
                         if (subscribeName) {
                             eventBus.$emit(subscribeName, {
                                 type: routesPath ? routesPath + "/" + key : key,
                                 payload: payload
                             }, state);
                         }
-                        ModulesCopy[key].call(state, payload);
+                        isCommitting = true;
+                        Methods[key].call(state, payload);
                         isCommitting = false;
                     });
                 }
                 else {
-                    var data = vueOption.data = vueOption.data || {};
-                    data[key] = Modules[key];
+                    var data = (vueOption.data = vueOption.data || {});
+                    data[key] = (preservedState && (key in preservedState)) ? preservedState[key] : UserModule[key];
                     var descriptor = {
-                        get: function () { return vueIns[key]; },
+                        get: function () { return vueStore.__vue__[key]; },
                         set: function (val) {
-                            vueIns[key] = val;
+                            vueStore.__vue__[key] = val;
                         },
                         enumerable: true
                     };
                     Object.defineProperty(state, key, descriptor);
                     Object.defineProperty(stateGetters, key, descriptor);
-                    Object.defineProperty(Module, key, descriptor);
+                    Object.defineProperty(vueStore, key, descriptor);
                 }
             }
         });
-        var vueIns = new Vue(vueOption);
-        Object.defineProperties(Module, {
-            __vue__: { value: vueIns },
-            __module__: { value: ModulesCopy },
-            __state__: { value: state }
+        Object.defineProperties(vueStore, {
+            __vue__: { value: new Vue(vueOption) },
+            __methods__: { value: Methods },
+            __getters__: { value: Getters },
+            __state__: { value: state },
+            __stateGetters__: { value: stateGetters }
+            // __path__: { value: routesPath },
+            // __module__: { value: UserModule }
         });
-        return Module;
+        return vueStore;
     }
-    var state = {};
-    var stateGetters = {};
-    var _store = _createStore(modules, [], state, stateGetters);
-    var store = _store;
+    var store = _createStore(modules);
     if (option && option.strict) {
         if (process.env.NODE_ENV === 'production') {
-            console.warn(prefix + 'Only use strict option in development mode!');
+            onWarn('Only use strict option in development mode.');
         }
-        eventBus.$watch(function () { return state; }, function () {
+        eventBus.$watch(function () { return store.__state__; }, function () {
             if (!isCommitting && !isReplacing) {
-                setTimeout(function () {
-                    throw new Error(prefix + 'Only mutation could change state!');
+                eventBus.$nextTick(function () {
+                    onError('Only mutation could change state.');
                 });
             }
         }, { deep: true, sync: true });
@@ -231,7 +233,7 @@ function createVueStore(modules, option) {
 var VueStorePlugin = {
     install: function (vue) {
         if (Vue && Vue === vue) {
-            console.warn(prefix + 'Do not install the plugin again.');
+            onWarn('Do not install the plugin again.');
         }
         Vue = vue;
         Vue.mixin({

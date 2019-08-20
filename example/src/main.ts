@@ -13,3 +13,13 @@ new Vue({
   router,
   render: h => h(App)
 }).$mount('#app')
+function foo() {
+  console.log('foo')
+}
+const a = new Vue({
+  methods: {
+    foo
+  }
+})
+
+console.log(a, a.foo === foo)

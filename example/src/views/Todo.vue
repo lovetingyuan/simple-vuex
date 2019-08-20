@@ -43,7 +43,8 @@ import Vue from 'vue'
 import store from '../store'
 import todoModule from '../modules/todoListModule'
 
-const todoStore = store.Todo || store.addModule('Todo', todoModule)
+const todoStore = store.addModule('Todo', todoModule)
+console.log(333, store.getState())
 
 type Item = typeof todoModule.list[0]
 
@@ -59,6 +60,13 @@ if (module.hot) {
 setTimeout(() => {
   store.removeModule('Counter');
 }, 5000);
+
+store.watch(() => {
+  const a = store.Todo.doneCount
+  return a
+}, function() {
+  console.log('done count change')
+})
 
 export default Vue.extend({
   data() {
@@ -106,9 +114,7 @@ export default Vue.extend({
     }
   },
   created() {
-    if (!todoStore.list.length) {
-      todoStore.$fetchList()
-    }
+    todoStore.$fetchList()
   }
 })
 </script>

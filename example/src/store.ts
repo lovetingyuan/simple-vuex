@@ -26,5 +26,24 @@ const store = VueStore.createStore({
     // devtoolPlugin
   ]
 })
+console.log(111, store.getState())
+store.replaceState({
+  Todo: {
+    list: [
+      {
+        text: 'init item',
+        done: false,
+        id: 23728
+      },
+      {
+        text: 'init item',
+        done: false,
+        id: 523452
+      }
+    ]
+  }
+})
+console.log(222, store.getState())
+
 
 export default store
