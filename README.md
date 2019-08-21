@@ -5,7 +5,7 @@ a simpler way to use redux-like state management in vue project
 
 * Simpler way to write your mutations, getters, actions, no ACTION_TYPE, commit, dispatch
 * Better and natural support for typescript
-* Only 1.4KB after gzip but with adequate support
+* Only 1.5KB after gzip but with adequate support
 
 ### install
 ```bash
@@ -77,7 +77,7 @@ export default store
 * `store = VueStore.createStore(modules, options)`
 * `store.watch(getter, callback)`
 * `store.subscribe(listener)`
-* `store.addModule(modulePath, module)`
+* `store.addModule(modulePath, module, options)`
 * `store.removeModule(modulePath)`
 * `store.replaceState(newState)`
 * `store.getState()`

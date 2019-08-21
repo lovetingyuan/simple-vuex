@@ -30,5 +30,4 @@ export type VueStoreOptions<S> = {
 
 export interface AddModuleOption {
   preserveState?: boolean
-  replace?: boolean
 }

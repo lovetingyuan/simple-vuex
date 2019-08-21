@@ -32,8 +32,9 @@ function createVueStore(modules, option) {
             if (vueStore[moduleName] && (options.preserveState || !('preserveState' in options))) {
                 Object.assign(_state, vueStore[moduleName].__state__);
             }
-            if (vueStore[moduleName] && vueStore[moduleName].__vue__ && !options.replace) {
-                onError(path + 'has been added.');
+            if (vueStore[moduleName] && vueStore[moduleName].__vue__) {
+                onWarn(path + " has been added, do not repeat to add it.");
+                return vueStore[moduleName];
             }
             vueStore[moduleName] = _createStore(_module, routes.concat(moduleName), _state);
             vueStore.__state__[moduleName] = vueStore[moduleName].__state__;
