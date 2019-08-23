@@ -1,9 +1,11 @@
 # vue-store
 *still developing...*
 
+[![npm version](https://img.shields.io/npm/v/@tingyuan/vue-store.svg)](https://www.npmjs.com/package/@tingyuan/vue-store)
+
 a simpler way to use redux-like state management in vue project
 
-* Simpler way to write your mutations, getters, actions, no ACTION_TYPE, commit, dispatch
+* Simpler way to share and change your application state, NO ACTION_TYPE, commit, dispatch, helpers...
 * Better and natural support for typescript
 * Only 1.5KB after gzip but with adequate support
 
@@ -55,7 +57,7 @@ const store = VueStore.createStore(modules, {
   strict: true,
   plugins: [
     store => {
-      store.subscribe(({type, actionType, payload}, state) => {
+      store.subscribe(({ type, actionType, payload }, state) => {
         if (type) {
           console.log('mutation called: ' + type)
         } else {
@@ -66,11 +68,41 @@ const store = VueStore.createStore(modules, {
   ]
 })
 
-store.Todo.doneCount // equals to `store.getters['Todo/doneCount']`
-store.Todo.addItem('new item') // equals to `store.commit('Todo/addItem', 'new item')`
-store.Todo.$fetchList() // equals to `store.dispatch('Todo/$fetchList')`
-
 export default store
+```
+
+```html
+<template>
+  <div>
+    <h1>Hello {{$store.user.name}}, Todo List({{counter}})</h1>
+    <input type="text" placeholder="enter whatever" v-model.trim="newItem" @keyup.enter="onAdd">
+    <ol>
+      <li v-for="item in todoList" :key="item.id" :class="item.done ? 'done' : ''">{{item.text}}</li>
+    </ol>
+  </div>
+</template>
+<script>
+export default {
+  data() {
+    return { newItem: '' }
+  },
+  computed: {
+    todoList() { return this.$store.Todo.list },
+    counter() { return this.$store.Todo.doneCount + '/' + this.todoList.length }
+  },
+  methods: {
+    onAdd() {
+      this.newItem && this.$store.Todo.addItem(this.newItem)
+    }
+  },
+  created() {
+    this.$store.Todo.$fetchList()
+  }
+}
+</script>
+<style>
+.done { text-decoration: line-through; }
+</style>
 ```
 
 ### api
