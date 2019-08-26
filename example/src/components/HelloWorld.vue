@@ -1,6 +1,6 @@
 <template>
   <div class="hello">
-    <h1>Hello {{$vueStore.user.name}}! <br> {{ msg }}</h1>
+    <h1>Hello {{$store.user.name}}! <br> {{ msg }}</h1>
     <p>
       For a guide and recipes on how to configure / customize this project,<br>
       check out the

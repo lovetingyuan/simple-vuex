@@ -1,16 +1,16 @@
 export default {
   count: 0,
-  add(num: number) {
+  add (num: number) {
     this.count = this.count + num
   },
-  double() {
+  double () {
     console.log('double')
     this.count = this.count * 2
   },
-  reset(newVal: number) {
+  reset (newVal: number) {
     this.count = newVal || 0
   },
-  $asyncNumber() {
+  $asyncNumber () {
     // mock async action
     return new Promise((resolve) => {
       setTimeout(() => {

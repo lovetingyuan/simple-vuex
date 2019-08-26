@@ -1,17 +1,17 @@
 import Vue from 'vue'
 import VueStore from 'vue-store'
+
+import CounterModule from '@/modules/counterModule'
+
+import { TodoModuleType } from '@/modules/todoListModule' // eslint-disable-line
 // import devtoolPlugin from '../../lib/devtool'
 
 Vue.use(VueStore)
-
-import CounterModule from '@/modules/counterModule'
 if (module.hot) {
   module.hot.accept('@/modules/counterModule', () => {
     store.hotUpdate('Counter', require('@/modules/counterModule').default)
   })
 }
-
-import { TodoModuleType } from '@/modules/todoListModule'
 
 const store = VueStore.createStore({
   user: {
@@ -44,6 +44,5 @@ store.replaceState({
   }
 })
 console.log(222, store.getState())
-
 
 export default store

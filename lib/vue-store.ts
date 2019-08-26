@@ -19,14 +19,15 @@ function onWarn (msg: string): void {
   console.warn('vue-store warn: ' + msg)
 }
 
-function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOptions<M & StoreProto<M>>): (M & StoreProto<M>) {
+function createVueStore<M extends CommonModule> (modules: M, options?: VueStoreOptions<M & StoreProto<M>>): (M & StoreProto<M>) {
   if (!Vue) {
     onError('Please install VueStorePlugin first.')
   }
   let isCommitting = false
   let isReplacing = false
   let subscribeName = ''
-  const eventBus = new Vue()
+  const _vm = new Vue()
+  const strict = options ? options.strict : false
   const base: StoreProto<M> = {
     addModule<MM extends CommonModule> (path: string, _module: MM, options?: AddModuleOption): MM {
       const routes = path.split('.')
@@ -66,8 +67,8 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
     subscribe (listener): () => void {
       subscribeName = subscribeName || 'vuestore-mutation-action-subscribe-event'
       const _listener = (data: ListenerData, state: M): void => { listener(data, state) }
-      eventBus.$on(subscribeName, _listener)
-      return (): void => { eventBus.$off(subscribeName, _listener) }
+      _vm.$on(subscribeName, _listener)
+      return (): void => { _vm.$off(subscribeName, _listener) }
     },
     replaceState (state: CommonModule, vueStore?: any): void {
       vueStore = vueStore || store
@@ -89,7 +90,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       })
     },
     watch (fn, cb, option): () => void {
-      return eventBus.$watch(fn, cb, option)
+      return _vm.$watch(fn, cb, option)
     },
     getState (): object {
       if (process.env.NODE_ENV === 'production') {
@@ -164,7 +165,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
           Methods[key] = UserModule[key]
           setFunction(vueStore, key, key[0] === '$' ? function (payload: any): any { // eslint-disable-line
             if (subscribeName) {
-              eventBus.$emit(subscribeName, {
+              _vm.$emit(subscribeName, {
                 actionType: routesPath ? `${routesPath}/${key}` : key,
                 payload
               }, state)
@@ -172,7 +173,7 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
             return Methods[key].call(vueStore, payload)
           } : function (payload: any): void {
             if (subscribeName) {
-              eventBus.$emit(subscribeName, {
+              _vm.$emit(subscribeName, {
                 type: routesPath ? `${routesPath}/${key}` : key,
                 payload
               }, state)
@@ -206,23 +207,25 @@ function createVueStore<M extends CommonModule> (modules: M, option?: VueStoreOp
       // __path__: { value: routesPath },
       // __module__: { value: UserModule }
     })
+    if (strict) {
+      vueStore.__vue__.$watch((): any => state, (): void => { // eslint-disable-line
+        if (!isCommitting && !isReplacing) {
+          setTimeout((): void => { // prevent vue to show error
+            onError('Only mutation could change state.')
+          })
+        }
+      }, { deep: true, sync: true } as any)
+    }
     return vueStore
   }
   const store = _createStore(modules) as (M & StoreProto<M>)
-  if (option && option.strict) {
+  if (strict) {
     if (process.env.NODE_ENV === 'production') {
       onWarn('Only use strict option in development mode.')
     }
-    eventBus.$watch((): object => store.__state__, (): void => {
-      if (!isCommitting && !isReplacing) {
-        eventBus.$nextTick((): void => { // prevent vue to show error
-          onError('Only mutation could change state.')
-        })
-      }
-    }, { deep: true, sync: true } as any)
   }
-  if (option && Array.isArray(option.plugins)) {
-    option.plugins.forEach((plugin: any): void => {
+  if (options && Array.isArray(options.plugins)) {
+    options.plugins.forEach((plugin: any): void => {
       typeof plugin === 'function' && plugin(store)
     })
   }

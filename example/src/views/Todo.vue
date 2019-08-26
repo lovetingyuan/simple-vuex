@@ -2,18 +2,18 @@
   <div class="todo">
     <h1>todo list</h1>
     <input type="text" placeholder="enter whatever" v-model.trim="event" @keyup.enter="onAdd">
-    <button @click="onAdd">add ({{$vueStore.Todo.doneCount}}/{{$vueStore.Todo.allCount}})</button>
+    <button @click="onAdd">add ({{$store.Todo.doneCount}}/{{$store.Todo.allCount}})</button>
     <span>
       <a href="javascript:void(0)"
-        :class="{active: $vueStore.Todo.status === 'all'}"
+        :class="{active: $store.Todo.status === 'all'}"
         @click="onFilter('all')">all
       </a> |
       <a href="javascript:void(0)"
-        :class="{active: $vueStore.Todo.status === 'done'}"
+        :class="{active: $store.Todo.status === 'done'}"
         @click="onFilter('done')">done
       </a> |
       <a href="javascript:void(0)"
-        :class="{active: $vueStore.Todo.status === 'undone'}"
+        :class="{active: $store.Todo.status === 'undone'}"
         @click="onFilter('undone')">undo
       </a>
     </span>
@@ -50,7 +50,6 @@ type Item = typeof todoModule.list[0]
 
 type Status = Parameters<typeof todoModule.setStatus>[0]
 
-
 if (module.hot) {
   module.hot.accept('@/modules/todoListModule', () => {
     store.hotUpdate('Todo', require('@/modules/todoListModule').default)
@@ -58,36 +57,36 @@ if (module.hot) {
 }
 
 setTimeout(() => {
-  store.removeModule('Counter');
-}, 5000);
+  store.removeModule('Counter')
+}, 5000)
 
 store.watch(() => {
   const a = store.Todo.doneCount
   return a
-}, function() {
+}, function () {
   console.log('done count change')
 })
 
 export default Vue.extend({
-  data() {
+  data () {
     return {
       event: '',
       editId: 0
     }
   },
   computed: {
-    list() {
+    list () {
       return todoStore.displayList
-    },
+    }
   },
   methods: {
-    onAdd() {
+    onAdd () {
       if (this.event) {
         todoStore.add(this.event)
         this.event = ''
       }
     },
-    onDelete(item: Item) {
+    onDelete (item: Item) {
       if (!item.done) {
         if (confirm(`Are you sure to delete: ${item.text} ?`)) {
           todoStore.remove(item.id)
@@ -96,13 +95,14 @@ export default Vue.extend({
         todoStore.remove(item.id)
       }
     },
-    onSwitch(item: Item) {
+    onSwitch (item: Item) {
       todoStore.markDone(item.id)
     },
-    onFilter(type: Status) {
+    onFilter (type: Status) {
       todoStore.setStatus(type)
+      todoStore.status = 'sdfs'
     },
-    onEdit(evt: Event) {
+    onEdit (evt: Event) {
       const newText = (evt.target as HTMLInputElement).value.trim()
       if (newText) {
         todoStore.edit({
@@ -113,7 +113,7 @@ export default Vue.extend({
       this.editId = 0
     }
   },
-  created() {
+  created () {
     todoStore.$fetchList()
   }
 })

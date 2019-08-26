@@ -31,3 +31,6 @@ export type VueStoreOptions<S> = {
 export interface AddModuleOption {
   preserveState?: boolean
 }
+
+export type CreateVueStore<M extends CommonModule> = (modules: M, option?: VueStoreOptions<M & StoreProto<M>>) => (M & StoreProto<M>)
+

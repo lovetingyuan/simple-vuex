@@ -6,20 +6,11 @@ import store from './store'
 import './registerServiceWorker'
 
 Vue.config.productionTip = false
-Vue.prototype.$vueStore = store
-console.log(store)
 
 new Vue({
   router,
+  store,
   render: h => h(App)
 }).$mount('#app')
-function foo() {
-  console.log('foo')
-}
-const a = new Vue({
-  methods: {
-    foo
-  }
-})
 
-console.log(a, a.foo === foo)
+// store.user.age = 78

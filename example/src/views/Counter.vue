@@ -14,7 +14,7 @@ import Vue from 'vue'
 import store from '../store'
 
 export default Vue.extend({
-  data() {
+  data () {
     return {
       loading: false
     }
@@ -30,13 +30,13 @@ export default Vue.extend({
     }
   },
   methods: {
-    onAddOne() {
+    onAddOne () {
       store.Counter.add(1)
     },
-    onDouble() {
+    onDouble () {
       store.Counter.double()
     },
-    onRandom() {
+    onRandom () {
       this.loading = true
       store.Counter.$asyncNumber().finally(() => {
         this.loading = false
