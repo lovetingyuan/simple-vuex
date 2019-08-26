@@ -105,6 +105,25 @@ export default {
 </style>
 ```
 
+### declare `store` option
+
+```typescript
+import store from './store'
+import Vue, { ComponentOptions } from 'vue'
+
+declare module 'vue/types/options' {
+  interface ComponentOptions<V extends Vue> {
+    store?: typeof store
+  }
+}
+
+declare module 'vue/types/vue' {
+  interface Vue {
+    $store: typeof store
+  }
+}
+```
+
 ### api
 * `store = VueStore.createStore(modules, options)`
 * `store.watch(getter, callback)`
