@@ -61,7 +61,7 @@ setTimeout(() => {
 }, 5000)
 
 store.watch(() => {
-  const a = store.Todo.doneCount
+  const a = store.Todo.doneCount && store.Todo.status
   return a
 }, function () {
   console.log('done count change')
@@ -100,7 +100,6 @@ export default Vue.extend({
     },
     onFilter (type: Status) {
       todoStore.setStatus(type)
-      todoStore.status = 'sdfs'
     },
     onEdit (evt: Event) {
       const newText = (evt.target as HTMLInputElement).value.trim()

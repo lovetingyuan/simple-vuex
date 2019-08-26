@@ -1,4 +1,4 @@
-import { WatchOptions } from 'vue'
+import _Vue, { WatchOptions } from 'vue'
 
 export interface CommonModule {
   [k: string]: any
@@ -24,13 +24,14 @@ export interface StoreProto<Y> {
 
 export type VueStoreOptions<S> = {
   strict?: boolean
-  plugins?: ((store: S) => any)[],
-  devtools?: boolean
+  plugins?: ((store: S) => any)[]
 }
 
 export interface AddModuleOption {
   preserveState?: boolean
 }
 
-export type CreateVueStore<M extends CommonModule> = (modules: M, option?: VueStoreOptions<M & StoreProto<M>>) => (M & StoreProto<M>)
-
+export interface VueStorePlugin {
+  install: (Vue: typeof _Vue) => void
+  createStore<M>(modules: M, options?: VueStoreOptions<M & StoreProto<M>>): (M & StoreProto<M>)
+}
