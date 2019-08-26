@@ -12,11 +12,11 @@ function setFunction (target: { [k: string]: any }, name: string, func: (...a: a
 }
 
 function onError (msg: string): never {
-  throw new Error('vue-store error: ' + msg)
+  throw new Error('[vue-store] error: ' + msg)
 }
 
 function onWarn (msg: string): void {
-  console.warn('vue-store warn: ' + msg)
+  console.warn('[vue-store] warn: ' + msg)
 }
 
 function createVueStore<M extends CommonModule> (modules: M, options?: VueStoreOptions<M & StoreProto<M>>): (M & StoreProto<M>) {
@@ -42,7 +42,9 @@ function createVueStore<M extends CommonModule> (modules: M, options?: VueStoreO
         Object.assign(_state, vueStore[moduleName].__state__)
       }
       if (vueStore[moduleName] && vueStore[moduleName].__vue__) {
-        onWarn(`${path} has been added, do not repeat to add it.`)
+        if (process.env.NODE_ENV !== 'production') {
+          onWarn(`Namespaced module: ${path} has been added, do not repeat to add it.`)
+        }
         return vueStore[moduleName]
       }
       vueStore[moduleName] = _createStore(_module, routes.concat(moduleName), _state)
@@ -210,17 +212,20 @@ function createVueStore<M extends CommonModule> (modules: M, options?: VueStoreO
     if (strict) {
       vueStore.__vue__.$watch((): any => state, (): void => { // eslint-disable-line
         if (!isCommitting && !isReplacing) {
-          setTimeout((): void => { // prevent vue to show error
-            onError('Only mutation could change state.')
-          })
+          try {
+            onError('Only mutation(pure function) could change state.')
+          } catch (err) {
+            // prevent vue to show error
+            setTimeout((): never => { throw err }, 0)
+          }
         }
       }, { deep: true, sync: true } as any)
     }
     return vueStore
   }
   const store = _createStore(modules) as (M & StoreProto<M>)
-  if (strict) {
-    if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production') {
+    if (strict) {
       onWarn('Only use strict option in development mode.')
     }
   }

@@ -1,7 +1,7 @@
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 typeof define === 'function' && define.amd ? define(factory) :
-(global = global || self, global.VueStorePlugin = factory());
+(global = global || self, global.VueStore = factory());
 }(this, function () { 'use strict';
 
 var Vue;
@@ -12,10 +12,10 @@ function setFunction(target, name, func) {
     target[name] = func;
 }
 function onError(msg) {
-    throw new Error('vue-store error: ' + msg);
+    throw new Error('[vue-store] error: ' + msg);
 }
 function onWarn(msg) {
-    console.warn('vue-store warn: ' + msg);
+    console.warn('[vue-store] warn: ' + msg);
 }
 function createVueStore(modules, options) {
     if (!Vue) {
@@ -40,7 +40,9 @@ function createVueStore(modules, options) {
                 Object.assign(_state, vueStore[moduleName].__state__);
             }
             if (vueStore[moduleName] && vueStore[moduleName].__vue__) {
-                onWarn(path + " has been added, do not repeat to add it.");
+                {
+                    onWarn("Namespaced module: " + path + " has been added, do not repeat to add it.");
+                }
                 return vueStore[moduleName];
             }
             vueStore[moduleName] = _createStore(_module, routes.concat(moduleName), _state);
@@ -216,9 +218,13 @@ function createVueStore(modules, options) {
         if (strict) {
             vueStore.__vue__.$watch(function () { return state; }, function () {
                 if (!isCommitting && !isReplacing) {
-                    setTimeout(function () {
-                        onError('Only mutation could change state.');
-                    });
+                    try {
+                        onError('Only mutation(pure function) could change state.');
+                    }
+                    catch (err) {
+                        // prevent vue to show error
+                        setTimeout(function () { throw err; }, 0);
+                    }
                 }
             }, { deep: true, sync: true });
         }

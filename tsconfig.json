@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "outDir": "./dist",
-    "allowJs": true,
-    "sourceMap": true,
+    "allowJs": false,
+    "sourceMap": false,
     "target": "es5",
-    "lib": ["es2017", "dom"],
+    "lib": ["es2017"],
     "moduleResolution": "node",
     "forceConsistentCasingInFileNames": true,
     "noImplicitReturns": true,
