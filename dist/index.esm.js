@@ -11,14 +11,15 @@ function onError(msg) {
 function onWarn(msg) {
     console.warn('vue-store warn: ' + msg);
 }
-function createVueStore(modules, option) {
+function createVueStore(modules, options) {
     if (!Vue) {
         onError('Please install VueStorePlugin first.');
     }
     var isCommitting = false;
     var isReplacing = false;
     var subscribeName = '';
-    var eventBus = new Vue();
+    var _vm = new Vue();
+    var strict = options ? options.strict : false;
     var base = {
         addModule: function (path, _module, options) {
             var routes = path.split('.');
@@ -58,8 +59,8 @@ function createVueStore(modules, option) {
         subscribe: function (listener) {
             subscribeName = subscribeName || 'vuestore-mutation-action-subscribe-event';
             var _listener = function (data, state) { listener(data, state); };
-            eventBus.$on(subscribeName, _listener);
-            return function () { eventBus.$off(subscribeName, _listener); };
+            _vm.$on(subscribeName, _listener);
+            return function () { _vm.$off(subscribeName, _listener); };
         },
         replaceState: function (state, vueStore) {
             var _this = this;
@@ -84,7 +85,7 @@ function createVueStore(modules, option) {
             });
         },
         watch: function (fn, cb, option) {
-            return eventBus.$watch(fn, cb, option);
+            return _vm.$watch(fn, cb, option);
         },
         getState: function () {
             if (process.env.NODE_ENV === 'production') {
@@ -166,7 +167,7 @@ function createVueStore(modules, option) {
                     Methods[key] = UserModule[key];
                     setFunction(vueStore, key, key[0] === '$' ? function (payload) {
                         if (subscribeName) {
-                            eventBus.$emit(subscribeName, {
+                            _vm.$emit(subscribeName, {
                                 actionType: routesPath ? routesPath + "/" + key : key,
                                 payload: payload
                             }, state);
@@ -174,7 +175,7 @@ function createVueStore(modules, option) {
                         return Methods[key].call(vueStore, payload);
                     } : function (payload) {
                         if (subscribeName) {
-                            eventBus.$emit(subscribeName, {
+                            _vm.$emit(subscribeName, {
                                 type: routesPath ? routesPath + "/" + key : key,
                                 payload: payload
                             }, state);
@@ -209,23 +210,25 @@ function createVueStore(modules, option) {
             // __path__: { value: routesPath },
             // __module__: { value: UserModule }
         });
+        if (strict) {
+            vueStore.__vue__.$watch(function () { return state; }, function () {
+                if (!isCommitting && !isReplacing) {
+                    setTimeout(function () {
+                        onError('Only mutation could change state.');
+                    });
+                }
+            }, { deep: true, sync: true });
+        }
         return vueStore;
     }
     var store = _createStore(modules);
-    if (option && option.strict) {
+    if (strict) {
         if (process.env.NODE_ENV === 'production') {
             onWarn('Only use strict option in development mode.');
         }
-        eventBus.$watch(function () { return store.__state__; }, function () {
-            if (!isCommitting && !isReplacing) {
-                eventBus.$nextTick(function () {
-                    onError('Only mutation could change state.');
-                });
-            }
-        }, { deep: true, sync: true });
     }
-    if (option && Array.isArray(option.plugins)) {
-        option.plugins.forEach(function (plugin) {
+    if (options && Array.isArray(options.plugins)) {
+        options.plugins.forEach(function (plugin) {
             typeof plugin === 'function' && plugin(store);
         });
     }
