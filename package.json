@@ -17,8 +17,9 @@
     "types"
   ],
   "scripts": {
-    "build": "rm -rf dist && npx rollup -c ./rollup.config.js",
-    "lint": "npx eslint --ext .js,.ts lib/vue-store.ts --fix"
+    "build": "npm run lint && rm -rf dist && npx rollup -c ./rollup.config.js",
+    "lint": "npx eslint --ext .js,.ts lib/vue-store.ts --fix",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
