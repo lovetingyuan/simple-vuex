@@ -43,8 +43,12 @@ import Vue from 'vue'
 import store from '../store'
 import todoModule from '../modules/todoListModule'
 
-const todoStore = store.addModule('Todo', todoModule)
+let todoStore = store.addModule('Todo', todoModule)
+
 console.log(333, store.getState())
+store.removeModule('Todo')
+console.log(444, store.getState())
+todoStore = store.addModule('Todo', todoModule)
 
 type Item = typeof todoModule.list[0]
 
@@ -53,12 +57,13 @@ type Status = Parameters<typeof todoModule.setStatus>[0]
 if (module.hot) {
   module.hot.accept('@/modules/todoListModule', () => {
     store.hotUpdate('Todo', require('@/modules/todoListModule').default)
+    todoStore = store.Todo
   })
 }
 
-setTimeout(() => {
-  store.removeModule('Counter')
-}, 5000)
+// setTimeout(() => {
+//   store.removeModule('Counter')
+// }, 5000)
 
 store.watch(() => {
   const a = store.Todo.doneCount && store.Todo.status
@@ -76,7 +81,8 @@ export default Vue.extend({
   },
   computed: {
     list () {
-      return todoStore.displayList
+      console.log('todo computed', this.$store.Todo.displayList)
+      return this.$store.Todo.displayList
     }
   },
   methods: {

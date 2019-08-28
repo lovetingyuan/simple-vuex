@@ -13,9 +13,52 @@ function onError(msg) {
 function onWarn(msg) {
     console.warn('[vue-store] warn: ' + msg);
 }
+function isCapital(val) {
+    if (!val)
+        return false;
+    return /[A-Z]/.test(val[0]);
+}
+function isObject(val) {
+    return ({}).toString.apply(val) === '[object Object]' && Object(val) === val;
+}
+function normalizeModule(userModule, routes, target) {
+    if (routes === void 0) { routes = []; }
+    if (typeof userModule === 'function') {
+        userModule = userModule();
+    }
+    var normalized = {
+        state: {}, getters: {}, mutations: {}, actions: {}, subModules: {}, routes: routes.slice()
+    };
+    Object.keys(userModule).forEach(function (name) {
+        if (isCapital(name)) {
+            if (userModule[name]) {
+                normalized.subModules[name] = normalizeModule(userModule[name], routes.concat(name), target ? target[name] : null);
+            }
+        }
+        else {
+            var getter = Object.getOwnPropertyDescriptor(userModule, name).get;
+            if (typeof getter === 'function') {
+                normalized.getters[name] = getter;
+            }
+            else if (typeof userModule[name] === 'function') {
+                normalized[name[0] === '$' ? 'actions' : 'mutations'][name] = userModule[name];
+            }
+            else {
+                if (target) {
+                    normalized.state[name] = target[name];
+                }
+                else {
+                    normalized.state[name] = userModule[name];
+                }
+            }
+        }
+    });
+    return normalized;
+}
+var STORE_META = '__VUE_STORE_META__';
 function createVueStore(modules, options) {
     if (!Vue) {
-        onError('Please install VueStorePlugin first.');
+        onError('Please install vue-store plugin first.');
     }
     var isCommitting = false;
     var isReplacing = false;
@@ -23,202 +66,248 @@ function createVueStore(modules, options) {
     var _vm = new Vue();
     var strict = options ? options.strict : false;
     var base = {
-        addModule: function (path, _module, options) {
+        addModule: function (path, userModule, options) {
+            if (process.env.NODE_ENV !== 'production') {
+                if (typeof path !== 'string' ||
+                    !path.split('.').length ||
+                    !userModule ||
+                    !isObject(userModule)) {
+                    onError('Invalid parameters for "store.addModule".');
+                }
+                var routes_1 = path.split('.');
+                var target_1 = store;
+                routes_1.forEach(function (r, i) {
+                    if (!isCapital(r)) {
+                        onError("module name must start with capital letter, but received \"" + r + "\"");
+                    }
+                    if (i !== routes_1.length - 1) {
+                        target_1 = target_1[r];
+                        if (!target_1 || !target_1.__vue__) {
+                            onError("module \"" + r + "\" does not exist, please add it first.");
+                        }
+                    }
+                    else {
+                        if (target_1[r] && target_1[r].__vue__) {
+                            onWarn("module \"" + path + "\" has been added, please do not repeat to add it.");
+                        }
+                    }
+                });
+            }
             var routes = path.split('.');
             options = options || {
                 preserveState: true
             };
             var moduleName = routes.pop();
-            var vueStore = store;
-            routes.forEach(function (r) { vueStore = vueStore[r]; });
-            var _state = {};
-            if (vueStore[moduleName] && (options.preserveState || !('preserveState' in options))) {
-                Object.assign(_state, vueStore[moduleName].__state__);
+            var target = store;
+            routes.forEach(function (r) { target = target[r]; });
+            if (target[moduleName] && target[moduleName].__vue__) {
+                return target[moduleName];
             }
-            if (vueStore[moduleName] && vueStore[moduleName].__vue__) {
-                if (process.env.NODE_ENV !== 'production') {
-                    onWarn("Namespaced module: " + path + " has been added, do not repeat to add it.");
-                }
-                return vueStore[moduleName];
+            var normalizedModule = normalizeModule(userModule);
+            if (target[moduleName] && (options.preserveState || !('preserveState' in options))) {
+                var vueIns = target[moduleName].__vue__;
+                normalizedModule.state = Object.assign({}, vueIns ? vueIns[STORE_META].state : target[moduleName]);
             }
-            vueStore[moduleName] = _createStore(_module, routes.concat(moduleName), _state);
-            vueStore.__state__[moduleName] = vueStore[moduleName].__state__;
-            return vueStore[moduleName];
+            target[moduleName] = _createVueStore(normalizedModule);
+            target[moduleName].__vue__[STORE_META].dynamic = true;
+            target.__vue__[STORE_META].state[moduleName] = target[moduleName].__vue__[STORE_META].state;
+            target.__vue__[STORE_META].stateGetters[moduleName] = target[moduleName].__vue__[STORE_META].stateGetters;
+            return target[moduleName];
         },
         removeModule: function (path) {
+            if (process.env.NODE_ENV !== 'production') {
+                if (typeof path !== 'string' ||
+                    !path.split('.').length) {
+                    onError('Invalid parameters for "store.removeModule".');
+                }
+                var routes_2 = path.split('.');
+                var target_2 = store;
+                routes_2.forEach(function (r, i) {
+                    if (!isCapital(r)) {
+                        onError("Module name \"" + r + "\" must start with capital letter.");
+                    }
+                    target_2 = target_2[r];
+                    if (!target_2 || !target_2.__vue__) {
+                        onError("Namespaced module \"" + r + "\" does not exist.");
+                    }
+                    if (i === routes_2.length - 1 && !target_2.__vue__[STORE_META].dynamic) {
+                        onError("Namespaced module \"" + path + "\" can not be removed as it is not dynamic module.");
+                    }
+                });
+            }
             var routes = path.split('.');
             var moduleName = routes.pop();
-            var vueStore = store;
-            routes.forEach(function (r) { vueStore = vueStore[r]; });
-            try {
-                var vueIns = vueStore[moduleName].__vue__;
-                delete vueStore.__state__[moduleName];
-                delete vueStore[moduleName];
-                vueIns.$destroy();
-            }
-            catch (_a) {
-                onError(path + " can not be removed as it is not dynamic module.");
-            }
+            var target = store;
+            routes.forEach(function (r) { target = target[r]; });
+            var vueIns = target[moduleName].__vue__;
+            vueIns.$destroy();
+            delete target[moduleName];
+            delete target.__vue__[STORE_META].state[moduleName];
+            delete target.__vue__[STORE_META].stateGetters[moduleName];
         },
         subscribe: function (listener) {
+            if (process.env.NODE_ENV !== 'production') {
+                if (typeof listener !== 'function') {
+                    onError('listener callback passed to "store.subscribe" must be a function.');
+                }
+            }
             subscribeName = subscribeName || 'vuestore-mutation-action-subscribe-event';
             var _listener = function (data, state) { listener(data, state); };
             _vm.$on(subscribeName, _listener);
             return function () { _vm.$off(subscribeName, _listener); };
         },
-        replaceState: function (state, vueStore) {
+        replaceState: function (state, target, routes) {
             var _this = this;
-            vueStore = vueStore || store;
-            Object.keys(state).forEach(function (key) {
-                if (/[A-Z]/.test(key[0])) {
-                    if (vueStore[key]) {
-                        _this.replaceState(state[key], vueStore[key]);
+            target = target || store;
+            Object.keys(state).forEach(function (name) {
+                if (isCapital(name)) {
+                    var newRoutes = (routes || []).concat(name);
+                    if (target[name] && target[name].__vue__) {
+                        _this.replaceState(state[name], target[name], newRoutes);
                     }
                     else {
-                        vueStore[key] = {
-                            __state__: state[key]
-                        };
-                        vueStore.__state__[key] = state[key];
+                        Object.assign(target[name], state[name]);
                     }
                 }
                 else {
                     isReplacing = true;
-                    vueStore.__vue__[key] = state[key];
+                    target.__vue__[name] = state[name];
                     isReplacing = false;
                 }
             });
         },
         watch: function (fn, cb, option) {
+            if (process.env.NODE_ENV !== 'production') {
+                if (typeof fn !== 'function' || typeof cb !== 'function') {
+                    onError('Invalid parameters passed to "store.watch".');
+                }
+            }
             return _vm.$watch(fn, cb, option);
         },
         getState: function () {
             if (process.env.NODE_ENV === 'production') {
                 onWarn('Only call getState in development mode.');
             }
-            return JSON.parse(JSON.stringify(store.__state__));
+            return JSON.parse(JSON.stringify(store.__vue__[STORE_META].state));
         },
-        hotUpdate: function (path, _module) {
-            var _this = this;
-            var newModule = typeof path === 'string' ? _module : path;
-            var routesPath = typeof path === 'string' ? path : '';
-            var routes = routesPath.split('.');
-            var vueStore = store;
-            routes.forEach(function (r) { vueStore = vueStore[r]; });
-            Object.keys(vueStore.__getters__).forEach(function (name) {
-                delete vueStore.__getters__[name];
-            });
-            Object.keys(vueStore.__methods__).forEach(function (name) {
-                delete vueStore.__methods__[name];
-            });
-            Object.keys(newModule).forEach(function (key) {
-                if (/[A-Z]/.test(key[0])) {
-                    _this.hotUpdate(routesPath + '.' + key, newModule[key]);
+        hotUpdate: function (path, hotModule) {
+            if (process.env.NODE_ENV !== 'production') {
+                if ((typeof path === 'string' && !isObject(hotModule)) ||
+                    !isObject(path)) {
+                    onError("Invalid parameters passed to \"store.hotUpdate\".");
                 }
-                else {
-                    var getter = Object.getOwnPropertyDescriptor(newModule, key).get;
-                    if (typeof getter === 'function') {
-                        vueStore.__getters__[key] = getter;
+                var routes_3 = path.split('.');
+                var target_3 = store;
+                routes_3.forEach(function (route) {
+                    if (!isCapital(route)) {
+                        onError("Module name \"" + route + "\" must start with capital letter.");
                     }
-                    else if (typeof newModule[key] === 'function') {
-                        vueStore.__methods__[key] = newModule[key];
+                    if (!target_3[route]) {
+                        onError("module " + path + " do not exists.");
                     }
-                }
-            });
+                    target_3 = target_3[route];
+                });
+            }
+            if (typeof path !== 'string') {
+                hotModule = path;
+                path = '';
+            }
+            var target = store;
+            var routes = [];
+            if (path) {
+                routes = path.split('.');
+                routes.forEach(function (route) {
+                    target = target[route];
+                });
+            }
+            var normalizedModule = normalizeModule(hotModule, routes);
+            target.__vue__[STORE_META].getters = normalizedModule.getters;
+            target.__vue__[STORE_META].mutations = normalizedModule.mutations;
+            target.__vue__[STORE_META].actions = normalizedModule.actions;
         }
     };
-    function _createStore(UserModule, routes, preservedState) {
-        if (routes === void 0) { routes = []; }
-        if (typeof UserModule === 'function') {
-            UserModule = UserModule();
-        }
-        var Methods = {}; // for hotUpdate, store functions
-        var Getters = {};
-        var state = {};
-        var stateGetters = {};
+    function _createVueStore(normalizedModule) {
+        var data = normalizedModule.state, getters = normalizedModule.getters, mutations = normalizedModule.mutations, actions = normalizedModule.actions, subModules = normalizedModule.subModules, routes = normalizedModule.routes;
         var vueStore = routes.length ? {} : Object.create(base);
-        var vueOption = {};
-        var routesPath = routes.join('/');
-        Object.keys(UserModule).forEach(function (key) {
-            if (/[A-Z]/.test(key[0])) {
-                if (!UserModule[key])
-                    return;
-                var _store = _createStore(UserModule[key], routes.concat(key));
-                Object.defineProperty(vueStore, key, {
-                    value: _store,
-                    enumerable: true,
-                    configurable: false // prevent to be deleted
-                });
-                state[key] = _store.__state__;
-                stateGetters[key] = _store.__stateGetters__;
-            }
-            else {
-                var getter = Object.getOwnPropertyDescriptor(UserModule, key).get;
-                if (typeof getter === 'function') {
-                    Getters[key] = getter;
-                    vueOption.computed = vueOption.computed || {};
-                    // eslint-disable-next-line
-                    setFunction(vueOption.computed, key, function () {
-                        return Getters[key].call(stateGetters);
-                    });
-                    var descriptor = {
-                        get: function () { return vueStore.__vue__[key]; },
-                        enumerable: true
-                    };
-                    Object.defineProperty(stateGetters, key, descriptor);
-                    Object.defineProperty(vueStore, key, descriptor);
-                }
-                else if (typeof UserModule[key] === 'function') {
-                    Methods[key] = UserModule[key];
-                    setFunction(vueStore, key, key[0] === '$' ? function (payload) {
-                        if (subscribeName) {
-                            _vm.$emit(subscribeName, {
-                                actionType: routesPath ? routesPath + "/" + key : key,
-                                payload: payload
-                            }, state);
-                        }
-                        return Methods[key].call(vueStore, payload);
-                    } : function (payload) {
-                        if (subscribeName) {
-                            _vm.$emit(subscribeName, {
-                                type: routesPath ? routesPath + "/" + key : key,
-                                payload: payload
-                            }, state);
-                        }
-                        isCommitting = true;
-                        Methods[key].call(state, payload);
-                        isCommitting = false;
-                    });
-                }
-                else {
-                    var data = (vueOption.data = vueOption.data || {});
-                    data[key] = (preservedState && (key in preservedState)) ? preservedState[key] : UserModule[key];
-                    var descriptor = {
-                        get: function () { return vueStore.__vue__[key]; },
-                        set: function (val) {
-                            vueStore.__vue__[key] = val;
-                        },
-                        enumerable: true
-                    };
-                    Object.defineProperty(state, key, descriptor);
-                    Object.defineProperty(stateGetters, key, descriptor);
-                    Object.defineProperty(vueStore, key, descriptor);
-                }
-            }
+        var state = {};
+        var stateGetters = Object.create(state);
+        var vueOptions = {
+            data: {},
+            computed: {},
+            methods: {}
+        };
+        Object.keys(data).forEach(function (name) {
+            vueOptions.data[name] = data[name];
+            var descriptor = {
+                get: function () {
+                    return vueStore.__vue__[name];
+                },
+                set: function (val) {
+                    vueStore.__vue__[name] = val;
+                },
+                enumerable: true
+            };
+            Object.defineProperty(vueStore, name, descriptor);
+            Object.defineProperty(state, name, descriptor);
         });
-        Object.defineProperties(vueStore, {
-            __vue__: { value: new Vue(vueOption) },
-            __methods__: { value: Methods },
-            __getters__: { value: Getters },
-            __state__: { value: state },
-            __stateGetters__: { value: stateGetters }
-            // __path__: { value: routesPath },
-            // __module__: { value: UserModule }
+        Object.keys(getters).forEach(function (name) {
+            vueOptions.computed[name] = function () {
+                return vueStore.__vue__[STORE_META].getters[name].call(stateGetters);
+            };
+            var descriptor = {
+                get: function () {
+                    return vueStore.__vue__[name];
+                },
+                enumerable: true
+            };
+            Object.defineProperty(vueStore, name, descriptor);
+            Object.defineProperty(stateGetters, name, descriptor);
+        });
+        Object.keys(mutations).forEach(function (name) {
+            vueOptions.methods[name] = function (payload) {
+                vueStore.__vue__[STORE_META].mutations[name].call(state, payload);
+            };
+            setFunction(vueStore, name, function (payload) {
+                isCommitting = true;
+                vueStore.__vue__[name](payload);
+                isCommitting = false;
+                subscribeName && _vm.$emit(subscribeName, {
+                    type: routes.join('.'),
+                    payload: payload
+                }, state);
+            });
+        });
+        Object.keys(actions).forEach(function (name) {
+            vueOptions.methods[name] = function (payload) {
+                return vueStore.__vue__[STORE_META].actions[name].call(vueStore, payload);
+            };
+            setFunction(vueStore, name, function (payload) {
+                var promise = vueStore.__vue__[name](payload);
+                return Promise.resolve(promise).then(function (res) {
+                    subscribeName && _vm.$emit(subscribeName, {
+                        actionType: routes.join('.'),
+                        payload: payload
+                    }, state);
+                    return res;
+                });
+            });
+        });
+        Object.keys(subModules).forEach(function (name) {
+            vueStore[name] = _createVueStore(subModules[name]);
+            state[name] = vueStore[name].__vue__[STORE_META].state;
+            stateGetters[name] = vueStore[name].__vue__[STORE_META].stateGetters;
+        });
+        Object.defineProperty(vueStore, '__vue__', { value: new Vue(vueOptions) });
+        Object.defineProperty(vueStore.__vue__, STORE_META, {
+            value: {
+                state: state, stateGetters: stateGetters, getters: getters, mutations: mutations, actions: actions
+            }
         });
         if (strict) {
             vueStore.__vue__.$watch(function () { return state; }, function () {
                 if (!isCommitting && !isReplacing) {
                     try {
-                        onError('Only mutation(pure function) could change state.');
+                        onError('Only mutation(pure function) could change store.');
                     }
                     catch (err) {
                         // prevent vue to show error
@@ -229,20 +318,31 @@ function createVueStore(modules, options) {
         }
         return vueStore;
     }
-    var store = _createStore(modules);
     if (process.env.NODE_ENV === 'production') {
         if (strict) {
             onWarn('Only use strict option in development mode.');
         }
     }
+    else {
+        if (!isObject(modules)) {
+            onError('modules must be plain object.');
+        }
+    }
+    var normalizedModule = normalizeModule(modules);
+    var store = _createVueStore(normalizedModule);
     if (options && Array.isArray(options.plugins)) {
         options.plugins.forEach(function (plugin) {
-            typeof plugin === 'function' && plugin(store);
+            if (typeof plugin === 'function') {
+                plugin(store);
+            }
+            else if (process.env.NODE_ENV !== 'production') {
+                onError("vue store plugin " + plugin + " must be function.");
+            }
         });
     }
     return store;
 }
-var VueStorePlugin = {
+var vueStore = {
     install: function (vue) {
         if (Vue && Vue === vue) {
             onWarn('Do not install the plugin again.');
@@ -263,4 +363,4 @@ var VueStorePlugin = {
     createStore: createVueStore
 };
 
-module.exports = VueStorePlugin;
+module.exports = vueStore;

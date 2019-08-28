@@ -1,2 +1,1 @@
-import VueStorePlugin from './lib/vue-store'
-export default VueStorePlugin
+export { default } from './lib/vue-store'

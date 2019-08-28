@@ -1,6 +1,6 @@
 {
   "name": "@tingyuan/vue-store",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "simpler vuex alternative",
   "main": "dist/vue-store.common.js",
   "module": "dist/vue-store.esm.js",
@@ -18,8 +18,8 @@
   ],
   "scripts": {
     "build": "npm run lint && rm -rf dist && npx rollup -c ./rollup.config.js",
-    "lint": "npx eslint --ext .js,.ts lib/vue-store.ts --fix",
-    "prepublish": "npm run build"
+    "lint": "npx eslint --ext .js,.ts lib/vue-store.ts --fix --rule '@typescript-eslint/promise-function-async: 0'",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -41,13 +41,11 @@
     "url": "https://github.com/lovetingyuan/vue-store/issues"
   },
   "homepage": "https://github.com/lovetingyuan/vue-store#readme",
-  "dependencies": {
+  "devDependencies": {
     "@types/node": "^12.6.6",
     "tslib": "^1.10.0",
     "vue": "^2.6.10",
-    "vuex": "^3.1.1"
-  },
-  "devDependencies": {
+    "vuex": "^3.1.1",
     "@typescript-eslint/eslint-plugin": "^1.13.0",
     "eslint": "^6.1.0",
     "eslint-config-standard-with-typescript": "^8.0.0",

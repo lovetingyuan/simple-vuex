@@ -30,7 +30,7 @@ module.exports = [
     plugins: [
       typescript(),
       replace({
-        'process.env.NODE_ENV': null // remove process for umd
+        'process.env.NODE_ENV': JSON.stringify('development')
       })
     ]
   },
@@ -45,9 +45,16 @@ module.exports = [
     plugins: [
       typescript(),
       replace({
-        'process.env.NODE_ENV': null
+        'process.env.NODE_ENV': JSON.stringify('production')
       }),
-      terser()
+      terser({
+        compress: {
+          pure_getters: true,
+          unsafe: true,
+          unsafe_comps: true,
+          warnings: false
+        }
+      })
     ]
   },
   {
@@ -73,7 +80,7 @@ module.exports = [
         target: 'es6'
       }),
       replace({
-        'process.env.NODE_ENV': null
+        'process.env.NODE_ENV': JSON.stringify('production')
       })
     ]
   }

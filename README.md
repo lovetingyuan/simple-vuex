@@ -7,11 +7,17 @@ a simpler way to use redux-like state management in vue project
 
 * Simpler way to share and change your application state, NO ACTION_TYPE, commit, dispatch, helpers...
 * Better and natural support for typescript
-* Only 1.5KB after gzip but with adequate support
+* Small size but with adequate support
 
 ### install
 ```bash
 npm install @tingyuan/vue-store
+```
+or
+```html
+<script src="https://cdn.jsdelivr.net/npm/@tingyuan/vue-store">
+/* export "VueStore" as global name. */
+</script>
 ```
 
 ### example

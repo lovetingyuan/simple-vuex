@@ -20,9 +20,11 @@ const todoModule = {
     return this.list.filter(v => this.status === Status.DONE ? v.done : !v.done)
   },
   get allCount () {
+    console.log(9898)
     return this.list.length
   },
   get doneCount () {
+    console.log('get yui6768790 asdasd')
     return this.list.filter(v => v.done).length
   },
   setList (list: Item[]) {
@@ -36,11 +38,14 @@ const todoModule = {
       text, id: Math.random(), done: false
     })
   },
+  get dd () {
+    return this.list.join(',')
+  },
   remove (id: number) {
     this.list = this.list.filter(v => v.id !== id)
   },
   markDone (id: number) {
-    console.log(id + 'yedfds9', this)
+    console.log(id + ' mark kjkjkj ', this)
     const item = this.list.find(v => v.id === id)
     if (item) {
       item.done = !item.done
@@ -53,6 +58,7 @@ const todoModule = {
     }
   },
   $fetchList () {
+    console.log('sdfs9fs')
     return new Promise((resolve) => {
       setTimeout(() => {
         const gen = (id: number) => ({ text: `async item ${id}`, id, done: Math.random() > 0.5 })

@@ -35,3 +35,12 @@ export interface VueStorePlugin {
   install: (Vue: typeof _Vue) => void
   createStore<M>(modules: M, options?: VueStoreOptions<M & StoreProto<M>>): (M & StoreProto<M>)
 }
+
+export interface NormalizedModule {
+  state: Record<string, any>
+  getters: Record<string, () => any>
+  mutations: Record<string, (payload: any) => void>
+  actions: Record<string, (payload: any) => Promise<any>>
+  subModules: Record<string, NormalizedModule>
+  routes: string[]
+}
