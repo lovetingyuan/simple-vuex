@@ -1,6 +1,6 @@
 {
   "name": "@tingyuan/vue-store",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "simpler vuex alternative",
   "main": "dist/vue-store.common.js",
   "module": "dist/vue-store.esm.js",

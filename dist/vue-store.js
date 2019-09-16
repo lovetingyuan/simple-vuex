@@ -189,11 +189,16 @@ function createVueStore(modules, options) {
             Object.keys(state).forEach(function (name) {
                 if (isCapital(name)) {
                     var newRoutes = (routes || []).concat(name);
-                    if (target[name] && target[name].__vue__) {
-                        _this.replaceState(state[name], target[name], newRoutes);
+                    if (target[name]) {
+                        if (target[name].__vue__) {
+                            _this.replaceState(state[name], target[name], newRoutes);
+                        }
+                        else {
+                            Object.assign(target[name], state[name]);
+                        }
                     }
                     else {
-                        Object.assign(target[name] || {}, state[name]);
+                        target[name] = Object.assign({}, state[name]);
                     }
                 }
                 else {

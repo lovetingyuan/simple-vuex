@@ -168,10 +168,14 @@ function createVueStore<M extends CommonModule> (modules: M, options?: VueStoreO
       Object.keys(state).forEach((name): void => {
         if (isCapital(name)) {
           const newRoutes = (routes || []).concat(name)
-          if (target[name] && target[name].__vue__) {
-            this.replaceState(state[name], target[name], newRoutes)
+          if (target[name]) {
+            if (target[name].__vue__) {
+              this.replaceState(state[name], target[name], newRoutes)
+            } else {
+              Object.assign(target[name], state[name])
+            }
           } else {
-            Object.assign(target[name] || {}, state[name])
+            target[name] = Object.assign({}, state[name])
           }
         } else {
           isReplacing = true
