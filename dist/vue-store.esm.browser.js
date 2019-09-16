@@ -108,7 +108,7 @@ function createVueStore(modules, options) {
                         this.replaceState(state[name], target[name], newRoutes);
                     }
                     else {
-                        Object.assign(target[name], state[name]);
+                        Object.assign(target[name] || {}, state[name]);
                     }
                 }
                 else {

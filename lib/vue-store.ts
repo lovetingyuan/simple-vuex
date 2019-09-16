@@ -171,7 +171,7 @@ function createVueStore<M extends CommonModule> (modules: M, options?: VueStoreO
           if (target[name] && target[name].__vue__) {
             this.replaceState(state[name], target[name], newRoutes)
           } else {
-            Object.assign(target[name], state[name])
+            Object.assign(target[name] || {}, state[name])
           }
         } else {
           isReplacing = true
@@ -200,7 +200,7 @@ function createVueStore<M extends CommonModule> (modules: M, options?: VueStoreO
           (typeof path === 'string' && !isObject(hotModule)) ||
           !isObject(path)
         ) {
-          onError(`Invalid parameters passed to "store.hotUpdate".`)
+          onError('Invalid parameters passed to "store.hotUpdate".')
         }
         const routes = path.split('.')
         let target: any = store
