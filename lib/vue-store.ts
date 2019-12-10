@@ -53,7 +53,7 @@ function createVueStore <T extends UserModule, S extends (T & typeof apis)> (use
       })
       return JSON.parse(JSON.stringify(state))
     },
-    addModule (path: string, userModule: UserModule) {
+    addModule (path: string, userModule: UserModule): UserModule {
       const routes = path.split('/')
       const ns = routes.pop() as string
       let parentModule = this as UserModule
@@ -66,6 +66,7 @@ function createVueStore <T extends UserModule, S extends (T & typeof apis)> (use
       if (!parentModule[ns]) {
         parentModule[ns] = parseModule(userModule, routes.concat(ns))
       }
+      return parentModule[ns]
     },
     removeModule (path: string) {
       'use strict';
@@ -143,7 +144,13 @@ function createVueStore <T extends UserModule, S extends (T & typeof apis)> (use
     }
   }
 
-  function parseModule (userModule: UserModule, routes: string[] = []) {
+  function parseModule (userModule: UserModule | (() => UserModule), routes: string[] = []) {
+    if (typeof userModule === 'function') {
+      userModule = userModule()
+    }
+    if (!userModule || typeof userModule !== 'object') {
+      return
+    }
     let store: any = routes.length ? {} : Object.create(apis)
     const subModules: UserModule = {} // delay to handle nest modules
     Object.keys(userModule).forEach(key => {
@@ -179,7 +186,9 @@ function createVueStore <T extends UserModule, S extends (T & typeof apis)> (use
           }
         }
       } else if (/[A-Z]/.test(key[0])) {
-        subModules[key] = userModule[key]
+        if (userModule[key]) {
+          subModules[key] = userModule[key]
+        }
       } else {
         store[key] = userModule[key]
       }

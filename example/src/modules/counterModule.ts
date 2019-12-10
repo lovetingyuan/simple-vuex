@@ -4,7 +4,7 @@ export default {
     this.count = this.count + num
   },
   double () {
-    console.log('double')
+    console.log('double3434')
     this.count = this.count * 2
   },
   reset (newVal: number) {

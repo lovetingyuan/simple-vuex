@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueStore from 'vue-store'
+import VueStore from '../../lib/vue-store'
 
 import CounterModule from '@/modules/counterModule'
 
