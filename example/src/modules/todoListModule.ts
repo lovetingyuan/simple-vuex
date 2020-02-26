@@ -20,7 +20,7 @@ const todoModule = {
     return this.list.filter(v => this.status === Status.DONE ? v.done : !v.done)
   },
   get allCount () {
-    console.log(9898)
+    console.log(9898, this)
     return this.list.length
   },
   get doneCount () {
@@ -58,7 +58,6 @@ const todoModule = {
     }
   },
   $fetchList () {
-    console.log('sdfs9fs')
     return new Promise((resolve) => {
       setTimeout(() => {
         const gen = (id: number) => ({ text: `async item ${id}`, id, done: Math.random() > 0.5 })

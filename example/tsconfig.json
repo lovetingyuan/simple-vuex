@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "es5",
     "module": "esnext",
     "strict": true,
     "jsx": "preserve",
@@ -10,6 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "baseUrl": ".",
+    "rootDir": "./",
     "types": [
       "webpack-env"
     ],
@@ -26,13 +27,15 @@
     ]
   },
   "include": [
-    "./src/**/*.ts",
-    "./src/**/*.tsx",
-    "./src/**/*.vue",
-    "./tests/**/*.ts",
-    "./tests/**/*.tsx", "types/shims-vue.d.ts", "types/shims-tsx.d.ts", "types/shims-vuestore.d.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "types/*.ts",
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "composite": true
 }

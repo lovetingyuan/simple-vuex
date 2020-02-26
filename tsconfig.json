@@ -4,7 +4,7 @@
     "allowJs": false,
     "sourceMap": false,
     "target": "es5",
-    "lib": ["es2017"],
+    "lib": ["esnext"],
     "moduleResolution": "node",
     "forceConsistentCasingInFileNames": true,
     "noImplicitReturns": true,
@@ -16,7 +16,8 @@
     "noUnusedLocals": true
   },
   "files": [
-    "types/index.ts",
-    "index.ts"
-  ]
+    "index.ts",
+    "types.ts"
+  ],
+  "composite": true
 }

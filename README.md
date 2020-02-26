@@ -133,11 +133,10 @@ declare module 'vue/types/vue' {
 ### api
 * `store = VueStore.createStore(modules, options)`
 * `store.watch(getter, callback)`
-* `store.subscribe(listener)`
+* `store.subscribe(listener, action)`
 * `store.addModule(modulePath, module, options)`
-* `store.removeModule(modulePath)`
 * `store.replaceState(newState)`
-* `store.getState()`
+* `store.getState(pure)`
 * `store.hotUpdate(path, module)`
 
 ### convention(compulsory in fact)

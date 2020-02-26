@@ -43,23 +43,26 @@ import Vue from 'vue'
 import store from '../store'
 import todoModule from '../modules/todoListModule'
 
-let todoStore = store.addModule('Todo', todoModule)
+let removeTodo = store.addModule('Todo', todoModule)
+let todoStore = store.Todo
 
 console.log(333, store.getState())
-store.removeModule('Todo')
+removeTodo()
 console.log(444, store.getState())
-todoStore = store.addModule('Todo', todoModule)
+store.addModule('Todo', todoModule)
+
+console.log(555, store.getState())
 
 type Item = typeof todoModule.list[0]
 
 type Status = Parameters<typeof todoModule.setStatus>[0]
 
-if (module.hot) {
-  module.hot.accept('@/modules/todoListModule', () => {
-    store.hotUpdate('Todo', require('@/modules/todoListModule').default)
-    todoStore = store.Todo
-  })
-}
+// if (module.hot) {
+//   module.hot.accept('@/modules/todoListModule', () => {
+//     store.hotUpdate('Todo', require('@/modules/todoListModule').default)
+//     todoStore = store.Todo
+//   })
+// }
 
 // setTimeout(() => {
 //   store.removeModule('Counter')
@@ -81,8 +84,8 @@ export default Vue.extend({
   },
   computed: {
     list () {
-      console.log('todo computed', this.$store.Todo.displayList)
-      return this.$store.Todo.displayList
+      // console.log('todo computed', this.$store.Todo.displayList)
+      return store.Todo.displayList
     }
   },
   methods: {
@@ -94,7 +97,7 @@ export default Vue.extend({
     },
     onDelete (item: Item) {
       if (!item.done) {
-        if (confirm(`Are you sure to delete: ${item.text} ?`)) {
+        if (window.confirm(`Are you sure to delete: ${item.text} ?`)) {
           todoStore.remove(item.id)
         }
       } else {

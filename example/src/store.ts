@@ -1,18 +1,18 @@
 import Vue from 'vue'
-import VueStore from '../../lib/vue-store'
+import VueStore, { createStore } from '../../index'
 
 import CounterModule from '@/modules/counterModule'
 
 import { TodoModuleType } from '@/modules/todoListModule'
 
 Vue.use(VueStore)
-if (module.hot) {
-  module.hot.accept('@/modules/counterModule', () => {
-    store.hotUpdate('Counter', require('@/modules/counterModule').default)
-  })
-}
+// if (module.hot) {
+//   module.hot.accept('@/modules/counterModule', () => {
+//     store.hotUpdate('Counter', require('@/modules/counterModule').default)
+//   })
+// }
 
-const store = VueStore.createStore({
+const store = createStore({
   user: {
     name: 'tingyuan',
     age: 12

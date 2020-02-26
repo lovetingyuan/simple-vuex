@@ -1,34 +1,37 @@
 {
-  "name": "example2",
+  "name": "example",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "rm -rf ./node_modules/.cache && vue-cli-service serve",
+    "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint",
-    "check": "npx npm-check-updates"
+    "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "core-js": "^2.6.5",
     "register-service-worker": "^1.6.2",
-    "vue": "^2.6.10",
-    "vue-router": "^3.0.3",
-    "vuex": "^3.0.1"
+    "vue": "^2.6.11",
+    "vue-router": "^3.1.5",
+    "vuex": "^3.1.2"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^3.9.0",
-    "@vue/cli-plugin-eslint": "^3.9.0",
-    "@vue/cli-plugin-pwa": "^3.9.0",
-    "@vue/cli-plugin-typescript": "^3.9.0",
-    "@vue/cli-service": "^3.9.0",
-    "@vue/eslint-config-standard": "^4.0.0",
-    "@vue/eslint-config-typescript": "^4.0.0",
-    "babel-eslint": "^10.0.1",
-    "eslint": "^6.2.2",
-    "eslint-plugin-vue": "^5.0.0",
-    "lint-staged": "^8.1.5",
-    "typescript": "^3.4.3",
-    "vue-template-compiler": "^2.6.10"
+    "@typescript-eslint/eslint-plugin": "^2.18.0",
+    "@typescript-eslint/parser": "^2.18.0",
+    "@vue/cli-plugin-eslint": "~4.2.0",
+    "@vue/cli-plugin-router": "~4.2.0",
+    "@vue/cli-plugin-typescript": "~4.2.0",
+    "@vue/cli-plugin-vuex": "~4.2.0",
+    "@vue/cli-service": "~4.2.0",
+    "@vue/eslint-config-standard": "^5.1.0",
+    "@vue/eslint-config-typescript": "^5.0.1",
+    "eslint": "^6.7.2",
+    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-node": "^11.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "eslint-plugin-vue": "^6.1.2",
+    "lint-staged": "^9.5.0",
+    "typescript": "~3.7.5",
+    "vue-template-compiler": "^2.6.11"
   },
   "eslintConfig": {
     "root": true,
@@ -38,17 +41,12 @@
     "extends": [
       "plugin:vue/essential",
       "@vue/standard",
-      "@vue/typescript"
+      "@vue/typescript/recommended"
     ],
-    "rules": {},
     "parserOptions": {
-      "parser": "@typescript-eslint/parser"
-    }
-  },
-  "postcss": {
-    "plugins": {
-      "autoprefixer": {}
-    }
+      "ecmaVersion": 2020
+    },
+    "rules": {}
   },
   "browserslist": [
     "> 1%",
@@ -58,7 +56,7 @@
     "pre-commit": "lint-staged"
   },
   "lint-staged": {
-    "*.{js,vue}": [
+    "*.{js,jsx,vue,ts,tsx}": [
       "vue-cli-service lint",
       "git add"
     ]
