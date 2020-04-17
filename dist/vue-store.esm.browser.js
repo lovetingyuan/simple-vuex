@@ -1,283 +1,214 @@
+import Vuex from 'vuex';
+
+/*! *****************************************************************************
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
+***************************************************************************** */
+
+function __awaiter(thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+}
+
 let Vue;
-function setFunction(target, name, func) {
-    if (func.name !== name) {
-        Object.defineProperty(func, 'name', { value: name });
-    }
-    target[name] = func;
-}
-function onError(msg) {
-    throw new Error('[vue-store] error: ' + msg);
-}
-function onWarn(msg) {
-    console.warn('[vue-store] warn: ' + msg);
-}
-function isCapital(val) {
-    if (!val)
-        return false;
-    return /[A-Z]/.test(val[0]);
-}
-function normalizeModule(userModule, routes = [], target) {
-    if (typeof userModule === 'function') {
-        userModule = userModule();
-    }
-    const normalized = {
-        state: {}, getters: {}, mutations: {}, actions: {}, subModules: {}, routes: [...routes]
-    };
-    Object.keys(userModule).forEach((name) => {
-        if (isCapital(name)) {
-            if (userModule[name]) {
-                normalized.subModules[name] = normalizeModule(userModule[name], routes.concat(name), target ? target[name] : null);
-            }
+function createVuexStore(modules, options) {
+    const defaultStateGetter = (state, key) => state[key];
+    const stateGetterMap = {};
+    const getStateGetter = (routes) => {
+        if (!routes.length)
+            return defaultStateGetter;
+        const router = routes.join('.');
+        if (!stateGetterMap[router]) {
+            // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
+            stateGetterMap[router] = new Function('s', 'n', `return s.${router}[n]`);
         }
-        else {
-            const getter = Object.getOwnPropertyDescriptor(userModule, name).get;
-            if (typeof getter === 'function') {
-                normalized.getters[name] = getter;
+        return stateGetterMap[router];
+    };
+    function setState(vs, key, routes) {
+        const stateGetter = getStateGetter(routes);
+        Object.defineProperty(vs, key, {
+            enumerable: true,
+            configurable: true,
+            get() {
+                return stateGetter(store.state, key);
+            },
+            set() {
+                throw new Error('[vue-store]: do not mutate vuex store state outside mutation handlers.');
             }
-            else if (typeof userModule[name] === 'function') {
-                normalized[name[0] === '$' ? 'actions' : 'mutations'][name] = userModule[name];
+        });
+    }
+    function findParent(router) {
+        const routes = router.split('.');
+        const moduleName = routes.pop();
+        let _vuestore = vueStore;
+        routes.forEach((name, i) => {
+            if (!_vuestore[name]) {
+                throw new Error(`[vue-store]: nest module "${routes.slice(0, i).join('.')}" does not exist.`);
+            }
+            _vuestore = _vuestore[name];
+        });
+        return [_vuestore, moduleName];
+    }
+    function normalizeModule(userModule, routes = []) {
+        const vuexModule = {
+            namespaced: true,
+            state: {}
+        };
+        const um = { g: {}, m: {}, a: {} };
+        const vueModule = {
+            __um__: um
+        };
+        Object.keys(userModule).forEach(key => {
+            var _a, _b, _c, _d;
+            const getter = Object.getOwnPropertyDescriptor(userModule, key).get;
+            const newRoutes = routes.concat(key).join('/');
+            const firstCode = key.charCodeAt(0);
+            if (firstCode >= 65 && firstCode <= 90) { // module
+                if (!userModule[key] || typeof userModule[key] !== 'object')
+                    return;
+                const [nestVuexModule, nestVueModule] = normalizeModule(userModule[key], routes.concat(key));
+                vuexModule.modules = (_a = vuexModule.modules) !== null && _a !== void 0 ? _a : {};
+                vuexModule.modules[key] = nestVuexModule;
+                vueModule[key] = nestVueModule;
+            }
+            else if (typeof getter === 'function') { // getter
+                vuexModule.getters = (_b = vuexModule.getters) !== null && _b !== void 0 ? _b : {};
+                um.g[key] = getter;
+                vuexModule.getters[key] = function (state, getters, rootState, rootGetters) {
+                    const getterState = Object.create(getters);
+                    Object.keys(state).forEach(k => {
+                        Object.defineProperty(getterState, k, {
+                            get() {
+                                return state[k];
+                            },
+                            enumerable: true,
+                            configurable: true
+                        });
+                    });
+                    return um.g[key].call(getterState);
+                };
+                const descriptor = {
+                    configurable: true,
+                    enumerable: true,
+                    get() {
+                        return store.getters[newRoutes];
+                    }
+                };
+                Object.defineProperty(vueModule, key, descriptor);
+            }
+            else if (firstCode === 36) { // action
+                // eslint-disable-next-line eqeqeq
+                if (userModule[key] == undefined)
+                    return;
+                vuexModule.actions = (_c = vuexModule.actions) !== null && _c !== void 0 ? _c : {};
+                um.a[key] = userModule[key];
+                vuexModule.actions[key] = function (ctx, payload) {
+                    return um.a[key].call(vueModule, payload);
+                };
+                // eslint-disable-next-line @typescript-eslint/promise-function-async
+                vueModule[key] = function (payload) {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const result = yield store.dispatch(newRoutes, payload);
+                        return result;
+                    });
+                };
+            }
+            else if (typeof userModule[key] === 'function') { // mutation
+                vuexModule.mutations = (_d = vuexModule.mutations) !== null && _d !== void 0 ? _d : {};
+                um.m[key] = userModule[key];
+                vuexModule.mutations[key] = function (state, payload) {
+                    um.m[key].call(state, payload);
+                };
+                vueModule[key] = function (payload) {
+                    store.commit(newRoutes, payload);
+                };
             }
             else {
-                if (target) {
-                    normalized.state[name] = target[name];
-                }
-                else {
-                    normalized.state[name] = userModule[name];
-                }
+                vuexModule.state[key] = userModule[key];
+                setState(vueModule, key, routes);
             }
-        }
-    });
-    return normalized;
-}
-const STORE_META = '__VUE_STORE_META__';
-function createVueStore(modules, options) {
-    if (!Vue) {
-        onError('Please install vue-store plugin first.');
+        });
+        return [vuexModule, vueModule];
     }
-    let isCommitting = false;
-    let isReplacing = false;
-    let subscribeName = '';
-    const _vm = new Vue();
-    const strict = options ? options.strict : false;
-    const base = {
-        addModule(path, userModule, options) {
-            const routes = path.split('.');
-            options = options || {
-                preserveState: true
+    const api = {
+        addModule(router, userModule) {
+            const [_store, moduleName] = findParent(router);
+            const routes = router.split('.');
+            const [vuexOptions, nestVueStore] = normalizeModule(userModule, routes);
+            store.registerModule(routes, vuexOptions);
+            _store[moduleName] = nestVueStore;
+            Object.defineProperty(_store, moduleName, {
+                value: nestVueStore,
+                enumerable: true
+            });
+            return () => {
+                store.unregisterModule(routes);
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                delete _store[moduleName];
             };
-            const moduleName = routes.pop();
-            let target = store;
-            routes.forEach((r) => { target = target[r]; });
-            if (target[moduleName] && target[moduleName].__vue__) {
-                return target[moduleName];
+        },
+        subscribe(sub, action) {
+            if (action) {
+                return store.subscribeAction(sub);
             }
-            const normalizedModule = normalizeModule(userModule);
-            if (target[moduleName] && (options.preserveState || !('preserveState' in options))) {
-                const vueIns = target[moduleName].__vue__;
-                normalizedModule.state = Object.assign({}, vueIns ? vueIns[STORE_META].state : target[moduleName]);
+            return store.subscribe(sub);
+        },
+        watch(fn, callback, options) {
+            return store.watch(fn, callback, options);
+        },
+        getState(pure) {
+            if (pure) {
+                return JSON.parse(JSON.stringify(store.state));
             }
-            target[moduleName] = _createVueStore(normalizedModule);
-            target[moduleName].__vue__[STORE_META].dynamic = true;
-            target.__vue__[STORE_META].state[moduleName] = target[moduleName].__vue__[STORE_META].state;
-            target.__vue__[STORE_META].stateGetters[moduleName] = target[moduleName].__vue__[STORE_META].stateGetters;
-            return target[moduleName];
+            return store.state;
         },
-        removeModule(path) {
-            const routes = path.split('.');
-            const moduleName = routes.pop();
-            let target = store;
-            routes.forEach((r) => { target = target[r]; });
-            const vueIns = target[moduleName].__vue__;
-            vueIns.$destroy();
-            delete target[moduleName];
-            delete target.__vue__[STORE_META].state[moduleName];
-            delete target.__vue__[STORE_META].stateGetters[moduleName];
-        },
-        subscribe(listener) {
-            subscribeName = subscribeName || 'vuestore-mutation-action-subscribe-event';
-            const _listener = (data, state) => { listener(data, state); };
-            _vm.$on(subscribeName, _listener);
-            return () => { _vm.$off(subscribeName, _listener); };
-        },
-        replaceState(state, target, routes) {
-            target = target || store;
-            Object.keys(state).forEach((name) => {
-                if (isCapital(name)) {
-                    const newRoutes = (routes || []).concat(name);
-                    if (target[name]) {
-                        if (target[name].__vue__) {
-                            this.replaceState(state[name], target[name], newRoutes);
-                        }
-                        else {
-                            Object.assign(target[name], state[name]);
-                        }
-                    }
-                    else {
-                        target[name] = Object.assign({}, state[name]);
-                    }
+        replaceState(newState, vs = vueStore, routes = []) {
+            if (!newState || typeof newState !== 'object')
+                return;
+            Object.keys(newState).forEach(key => {
+                var _a;
+                if (/[A-Z]/.test(key[0])) {
+                    vs[key] = (_a = vs[key]) !== null && _a !== void 0 ? _a : {};
+                    api.replaceState(newState[key], vs[key], routes.concat(key));
                 }
                 else {
-                    isReplacing = true;
-                    target.__vue__[name] = state[name];
-                    isReplacing = false;
+                    setState(vs, key, routes);
                 }
             });
-        },
-        watch(fn, cb, option) {
-            return _vm.$watch(fn, cb, option);
-        },
-        getState() {
-            {
-                onWarn('Only call getState in development mode.');
+            if (!routes.length) {
+                store.replaceState(newState);
             }
-            return JSON.parse(JSON.stringify(store.__vue__[STORE_META].state));
-        },
-        hotUpdate(path, hotModule) {
-            if (typeof path !== 'string') {
-                hotModule = path;
-                path = '';
-            }
-            let target = store;
-            let routes = [];
-            if (path) {
-                routes = path.split('.');
-                routes.forEach((route) => {
-                    target = target[route];
-                });
-            }
-            const normalizedModule = normalizeModule(hotModule, routes);
-            target.__vue__[STORE_META].getters = normalizedModule.getters;
-            target.__vue__[STORE_META].mutations = normalizedModule.mutations;
-            target.__vue__[STORE_META].actions = normalizedModule.actions;
         }
     };
-    function _createVueStore(normalizedModule) {
-        const { state: data, getters, mutations, actions, subModules, routes } = normalizedModule;
-        const vueStore = routes.length ? {} : Object.create(base);
-        const state = {};
-        const stateGetters = Object.create(state);
-        const vueOptions = {
-            data: {},
-            computed: {},
-            methods: {}
-        };
-        Object.keys(data).forEach((name) => {
-            vueOptions.data[name] = data[name];
-            const descriptor = {
-                get() {
-                    return vueStore.__vue__[name];
-                },
-                set(val) {
-                    vueStore.__vue__[name] = val;
-                },
-                enumerable: true
-            };
-            Object.defineProperty(vueStore, name, descriptor);
-            Object.defineProperty(state, name, descriptor);
-        });
-        Object.keys(getters).forEach((name) => {
-            vueOptions.computed[name] = function () {
-                return vueStore.__vue__[STORE_META].getters[name].call(stateGetters);
-            };
-            const descriptor = {
-                get() {
-                    return vueStore.__vue__[name];
-                },
-                enumerable: true
-            };
-            Object.defineProperty(vueStore, name, descriptor);
-            Object.defineProperty(stateGetters, name, descriptor);
-        });
-        Object.keys(mutations).forEach((name) => {
-            vueOptions.methods[name] = function (payload) {
-                vueStore.__vue__[STORE_META].mutations[name].call(state, payload);
-            };
-            setFunction(vueStore, name, (payload) => {
-                isCommitting = true;
-                vueStore.__vue__[name](payload);
-                isCommitting = false;
-                subscribeName && _vm.$emit(subscribeName, {
-                    type: routes.join('.'),
-                    payload
-                }, state);
-            });
-        });
-        Object.keys(actions).forEach((name) => {
-            vueOptions.methods[name] = function (payload) {
-                return vueStore.__vue__[STORE_META].actions[name].call(vueStore, payload);
-            };
-            setFunction(vueStore, name, (payload) => {
-                const promise = vueStore.__vue__[name](payload);
-                return Promise.resolve(promise).then((res) => {
-                    subscribeName && _vm.$emit(subscribeName, {
-                        actionType: routes.join('.'),
-                        payload
-                    }, state);
-                    return res;
-                });
-            });
-        });
-        Object.keys(subModules).forEach((name) => {
-            vueStore[name] = _createVueStore(subModules[name]);
-            state[name] = vueStore[name].__vue__[STORE_META].state;
-            stateGetters[name] = vueStore[name].__vue__[STORE_META].stateGetters;
-        });
-        Object.defineProperty(vueStore, '__vue__', { value: new Vue(vueOptions) });
-        Object.defineProperty(vueStore.__vue__, STORE_META, {
-            value: {
-                state, stateGetters, getters, mutations, actions
-            }
-        });
-        if (strict) {
-            vueStore.__vue__.$watch(() => state, () => {
-                if (!isCommitting && !isReplacing) {
-                    try {
-                        onError('Only mutation(pure function) could change store.');
-                    }
-                    catch (err) {
-                        // prevent vue to show error
-                        setTimeout(() => { throw err; }, 0);
-                    }
-                }
-            }, { deep: true, sync: true });
-        }
-        return vueStore;
-    }
-    {
-        if (strict) {
-            onWarn('Only use strict option in development mode.');
-        }
-    }
-    const normalizedModule = normalizeModule(modules);
-    const store = _createVueStore(normalizedModule);
-    if (options && Array.isArray(options.plugins)) {
-        options.plugins.forEach((plugin) => {
-            if (typeof plugin === 'function') {
-                plugin(store);
-            }
-        });
-    }
-    return store;
+    const [storeOptions, vueStore] = normalizeModule(modules);
+    Vue.use(Vuex);
+    const store = new Vuex.Store(Object.assign(storeOptions, options));
+    api.$store = store;
+    Object.setPrototypeOf(vueStore, api);
+    return vueStore;
 }
-var vueStore = {
-    install(vue) {
-        if (Vue && Vue === vue) {
-            onWarn('Do not install the plugin again.');
-        }
-        Vue = vue;
-        Vue.mixin({
-            beforeCreate() {
-                const options = this.$options;
-                if (options.store) {
-                    this.$store = options.store;
-                }
-                else if (options.parent && options.parent.$store) {
-                    this.$store = options.parent.$store;
-                }
-            }
-        });
-    },
-    createStore: createVueStore
+const createStore = createVuexStore;
+const vuestoreplugin = (vue) => {
+    if (Vue && Vue === vue) {
+        console.warn('[vue-store]: Do not install the plugin again.');
+    }
+    Vue = vue;
 };
 
-export default vueStore;
+export default vuestoreplugin;
+export { createStore };

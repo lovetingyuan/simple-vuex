@@ -44,7 +44,6 @@ function createVuexStore<M extends UserModule> (modules: M, options: Options): V
   }
 
   function normalizeModule (userModule: UserModule, routes: readonly string[] = []): [Module<any, any>, UserModule] {
-    'use strict'
     const vuexModule: Module<any, any> = {
       namespaced: true,
       state: {}
@@ -101,8 +100,9 @@ function createVuexStore<M extends UserModule> (modules: M, options: Options): V
           return um.a[key].call(vueModule, payload)
         }
         // eslint-disable-next-line @typescript-eslint/promise-function-async
-        vueModule[key] = function (payload: any) {
-          return store.dispatch(newRoutes, payload)
+        vueModule[key] = async function (payload: any) {
+          const result = await store.dispatch(newRoutes, payload)
+          return result
         }
       } else if (typeof userModule[key] === 'function') { // mutation
         vuexModule.mutations = vuexModule.mutations ?? {}
